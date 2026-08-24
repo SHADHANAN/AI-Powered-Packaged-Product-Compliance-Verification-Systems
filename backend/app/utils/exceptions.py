@@ -1,4 +1,4 @@
-from typing import Any, Optional, Dict
+from typing import Any, Dict, Optional
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -55,6 +55,17 @@ class UnauthorizedException(AppException):
             status_code=status.HTTP_401_UNAUTHORIZED,
             details=details,
             headers=headers or {"WWW-Authenticate": "Bearer"},
+        )
+
+
+class PayloadTooLargeException(AppException):
+    """Exception raised when uploaded payload or file exceeds maximum allowed size."""
+
+    def __init__(self, message: str = "Payload too large", details: Optional[Any] = None):
+        super().__init__(
+            message=message,
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            details=details,
         )
 
 
