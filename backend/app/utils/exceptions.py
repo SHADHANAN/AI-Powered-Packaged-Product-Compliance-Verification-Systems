@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any, Optional, Dict
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -18,11 +18,13 @@ class AppException(Exception):
         message: str = "An application error occurred",
         status_code: int = status.HTTP_400_BAD_REQUEST,
         details: Optional[Any] = None,
+        headers: Optional[Dict[str, str]] = None,
     ):
         super().__init__(message)
         self.message = message
         self.status_code = status_code
         self.details = details
+        self.headers = headers
 
 
 class NotFoundException(AppException):
@@ -37,6 +39,23 @@ class BadRequestException(AppException):
 
     def __init__(self, message: str = "Bad request", details: Optional[Any] = None):
         super().__init__(message=message, status_code=status.HTTP_400_BAD_REQUEST, details=details)
+
+
+class UnauthorizedException(AppException):
+    """Exception raised for authentication failures."""
+
+    def __init__(
+        self,
+        message: str = "Could not validate credentials",
+        details: Optional[Any] = None,
+        headers: Optional[Dict[str, str]] = None,
+    ):
+        super().__init__(
+            message=message,
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            details=details,
+            headers=headers or {"WWW-Authenticate": "Bearer"},
+        )
 
 
 class InternalServerErrorException(AppException):
@@ -61,7 +80,7 @@ async def app_exception_handler(request: Request, exc: AppException) -> JSONResp
             "details": exc.details,
         },
     }
-    return JSONResponse(status_code=exc.status_code, content=content)
+    return JSONResponse(status_code=exc.status_code, content=content, headers=exc.headers)
 
 
 async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
@@ -75,7 +94,8 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException) 
             "details": None,
         },
     }
-    return JSONResponse(status_code=exc.status_code, content=content)
+    headers = getattr(exc, "headers", None)
+    return JSONResponse(status_code=exc.status_code, content=content, headers=headers)
 
 
 async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:

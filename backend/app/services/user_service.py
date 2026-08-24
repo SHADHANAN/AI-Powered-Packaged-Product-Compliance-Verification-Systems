@@ -7,18 +7,22 @@ from sqlalchemy.orm import Session
 from app.models.user import User
 from app.schemas.user import UserCreate
 from app.utils.exceptions import BadRequestException, NotFoundException
+from app.utils.security import hash_password
 
 
 def create_user(db: Session, user_in: UserCreate) -> User:
-    """Create and persist a new user with duplicate check and rollback safety."""
+    """Create and persist a new user with Argon2 password hashing, duplicate check, and rollback safety."""
     existing_user = db.scalar(select(User).where(User.email == user_in.email))
     if existing_user:
         raise BadRequestException(f"User with email '{user_in.email}' already exists")
 
+    # Hash plaintext password with Argon2
+    hashed_password = hash_password(user_in.password)
+
     user = User(
         name=user_in.name,
         email=user_in.email,
-        password_hash=f"hash_{user_in.password}",
+        password_hash=hashed_password,
         role=user_in.role,
         is_active=user_in.is_active,
     )

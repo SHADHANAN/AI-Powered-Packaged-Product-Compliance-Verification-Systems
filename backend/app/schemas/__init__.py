@@ -1,5 +1,6 @@
 """Pydantic schemas for data validation and API response serialization."""
 
+from app.schemas.auth import LoginRequest, TokenResponse
 from app.schemas.common import ErrorDetail, ErrorResponse, RootResponse
 from app.schemas.compliance_check import (
     ComplianceCheckBase,
@@ -37,6 +38,9 @@ from app.schemas.verification import (
 )
 
 __all__ = [
+    # Auth
+    "LoginRequest",
+    "TokenResponse",
     # Common & Health
     "HealthResponse",
     "DatabaseHealthResponse",

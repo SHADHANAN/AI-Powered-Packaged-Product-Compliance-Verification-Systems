@@ -30,6 +30,11 @@ class Settings(BaseSettings):
     # Database Configuration
     DATABASE_URL: str = "postgresql+psycopg://postgres:postgres@localhost:5432/product_compliance"
 
+    # JWT Authentication Configuration
+    JWT_SECRET_KEY: str = "change-this-in-production-secret-key-min-32-chars"
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+
     # Server Configuration
     HOST: str = "0.0.0.0"
     PORT: int = 8000
