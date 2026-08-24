@@ -6,8 +6,13 @@ from sqlalchemy.orm import Session
 from app.api.dependencies import get_current_user
 from app.database import get_db
 from app.models.user import User
+from app.schemas.extracted_field import ExtractedFieldRead
 from app.schemas.verification import VerificationCreate, VerificationRead
-from app.services import image_service, verification_service
+from app.services import (
+    image_service,
+    verification_pipeline_service,
+    verification_service,
+)
 from app.utils.file_validation import validate_image_file
 
 router = APIRouter(tags=["Verifications"])
@@ -47,6 +52,38 @@ def upload_verification_image(
     except Exception:
         image_service.delete_image_file(stored_path)
         raise
+
+
+@router.post(
+    "/{id}/process",
+    response_model=VerificationRead,
+    status_code=status.HTTP_200_OK,
+    summary="Process Verification Pipeline",
+    description="Run OCR and structured field extraction pipeline on a stored verification image.",
+)
+def process_verification_pipeline(
+    id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> VerificationRead:
+    """Execute OCR and field extraction on an existing verification image."""
+    return verification_pipeline_service.process_verification(db=db, verification_id=id)
+
+
+@router.get(
+    "/{id}/fields",
+    response_model=List[ExtractedFieldRead],
+    status_code=status.HTTP_200_OK,
+    summary="Get Extracted Fields for Verification",
+    description="Retrieve all extracted label fields associated with a specific verification.",
+)
+def get_verification_extracted_fields(
+    id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> List[ExtractedFieldRead]:
+    """Retrieve all ExtractedField records created for a verification run."""
+    return verification_pipeline_service.get_verification_fields(db=db, verification_id=id)
 
 
 @router.post(

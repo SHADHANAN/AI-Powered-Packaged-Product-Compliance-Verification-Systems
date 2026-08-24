@@ -11,7 +11,8 @@ Production-oriented FastAPI backend for automated packaged product Legal Metrolo
 - **Phase 3 (Database Models)**: Comprehensive SQLAlchemy 2.x typed models, constraints, relationships, indexes, Pydantic schemas, and Alembic migrations.
 - **Phase 4 (CRUD Services & API Routers)**: Clean service layer with repository/service pattern, thin routers, transactional rollback, cascade deletion handling.
 - **Phase 5 (Security & JWT Auth)**: Argon2id password hashing, JWT Bearer authentication (`POST /api/auth/login`, `GET /api/auth/me`), `get_current_user` dependency.
-- **Phase 6 (Image Upload & Verification Pipeline)**: Authenticated multi-format product image upload, binary validation, path-traversal prevention, atomic file rollback, and verification record creation.
+- **Phase 6 (Image Upload Pipeline)**: Authenticated multi-format product image upload, binary validation, path-traversal prevention, atomic file rollback, and verification record creation.
+- **Phase 7 (OCR & Field Extraction Pipeline)**: Deterministic image preprocessing with Pillow, pluggable Tesseract OCR extraction with graceful local fallback, Legal Metrology regex extraction heuristics, and persistent `ExtractedField` storage.
 
 ---
 
@@ -30,58 +31,78 @@ User (Inspector/Admin)
 
 ---
 
-## Phase 6: Image Upload & Verification Pipeline
+## Phase 7: OCR & Field Extraction Pipeline
 
-### Endpoint: `POST /api/verifications/upload`
-- **Content-Type**: `multipart/form-data`
-- **Authentication**: Required (`Authorization: Bearer <JWT>`)
-- **Form Parameters**:
-  - `file`: Image file binary (`UploadFile`, Required)
-  - `product_id`: Optional associated Product UUID (`Form(None)`)
-- **Supported Formats**: `JPEG`, `JPG`, `PNG`, `WEBP`
-- **Allowed MIME Types**: `image/jpeg`, `image/png`, `image/webp`
-- **Maximum File Size**: `10 MB` (Configurable via `MAX_UPLOAD_SIZE_BYTES`)
-- **Success Status**: `201 Created` returning `VerificationRead`
+### Pipeline Flow
 
-### Image Storage & Security Protections
-- **Sanitized UUID Storage**: Files are saved as `{uuid4}.{ext}` inside `uploads/images/`, stripping client-supplied names to completely prevent path traversal (`../../`).
-- **Binary Integrity Verification**: Validates magic bytes and structural image headers using Pillow to reject corrupted files and non-image payloads disguised with image extensions.
-- **Atomic Cleanup**: If database creation or foreign key validation fails, uploaded image files are deleted immediately to avoid orphaned storage artifacts.
-- **Protected Storage**: Uploads directory is not exposed as a public static directory.
+```text
+Verification (Status: PENDING)
+        ↓
+POST /api/verifications/{id}/process (JWT Auth)
+        ↓
+Status updated to PROCESSING
+        ↓
+Load Stored Image (uploads/images/<uuid>.<ext>)
+        ↓
+Pillow Image Preprocessing (Grayscale, Resize, Contrast, Sharpness)
+        ↓
+Tesseract OCR Text Extraction
+        ↓
+Verification.ocr_raw_text updated
+        ↓
+Structured Field Extraction (Legal Metrology regex heuristics)
+        ↓
+Persist ExtractedField records (with confidence 0.0-1.0 and source text)
+        ↓
+Status updated to COMPLETED (or FAILED on error)
+        ↓
+Return VerificationRead
+```
 
-### Error Responses
-- `401 Unauthorized`: Missing, expired, or invalid JWT Bearer token.
-- `400 Bad Request`: Empty file (0 bytes), unsupported extension, mismatched MIME type, or corrupted image.
-- `413 Payload Too Large`: Uploaded image exceeds 10 MB limit.
-- `404 Not Found`: Provided `product_id` does not exist.
-- `500 Internal Server Error`: Disk write or storage failure without leaking filesystem internals.
+### Supported Extracted Fields
+
+| Field Name | Description | Example Extracted Value |
+| :--- | :--- | :--- |
+| `mrp` | Maximum Retail Price | `299.00` |
+| `net_quantity` | Net Quantity & Unit | `500 g` |
+| `quantity_unit` | Isolated Measurement Unit | `g`, `ml`, `kg`, `pcs` |
+| `batch_number` | Batch / Lot Identification | `B-2024/09A` |
+| `manufacturing_date` | Manufacturing / Packaging Date | `15/08/2024` |
+| `import_date` | Importation Date | `10/2024` |
+| `country_of_origin` | Country of Origin Declaration | `India` |
+| `manufacturer` | Name and Address of Manufacturer | `HealthFoods India Ltd, Bangalore` |
+| `importer` | Name and Address of Importer | `Global Imports Ltd, Mumbai` |
+| `customer_care_details`| Consumer Care Email / Phone / Address | `care@brandfoods.com / 1800-111-2222` |
+| `product_name` | Declared Name of Commodity | `Crunchy Almond Granola` |
+| `brand_name` | Brand / Trademark Identifier | `NutriBite` |
 
 ---
 
-## Database Migrations (Alembic)
+## API Endpoints
 
-From the `backend/` directory:
+### Authentication
+- `POST /api/auth/login`: Authenticate with email/password to obtain JWT Bearer token.
+- `GET /api/auth/me`: Retrieve current authenticated user profile.
 
-- **Apply all migrations**:
-  ```bash
-  alembic upgrade head
-  ```
+### Verification & Processing
+- `POST /api/verifications/upload`: Upload packaged product image (`multipart/form-data`) -> `201 Created`.
+- `POST /api/verifications/{id}/process`: Run OCR and field extraction pipeline on uploaded image -> `200 OK`.
+- `GET /api/verifications/{id}/fields`: Retrieve all structured fields extracted for a verification -> `200 OK`.
 
-- **Roll back the latest migration**:
-  ```bash
-  alembic downgrade -1
-  ```
-
-- **Check current revision**:
-  ```bash
-  alembic current
-  ```
+### CRUD Endpoints
+- `Users`: `POST /api/users`, `GET /api/users`, `GET /api/users/{id}`, `DELETE /api/users/{id}`
+- `Products`: `POST /api/products`, `GET /api/products`, `GET /api/products/{id}`, `DELETE /api/products/{id}`
+- `Verifications`: `POST /api/verifications`, `GET /api/verifications`, `GET /api/verifications/{id}`, `DELETE /api/verifications/{id}`
+- `Extracted Fields`: `POST /api/extracted-fields`, `GET /api/extracted-fields`, `GET /api/extracted-fields/{id}`, `DELETE /api/extracted-fields/{id}`
+- `Compliance Checks`: `POST /api/compliance-checks`, `GET /api/compliance-checks`, `GET /api/compliance-checks/{id}`, `DELETE /api/compliance-checks/{id}`
+- `Reports`: `POST /api/reports`, `GET /api/reports`, `GET /api/reports/{id}`, `DELETE /api/reports/{id}`
+- `Health`: `GET /api/health`, `GET /api/health/db`
 
 ---
 
 ## Running Automated Tests
 
-Run the complete test suite across database, models, auth, CRUD, and image upload:
+Run the complete 96-test verification suite:
 
 ```bash
 pytest -v

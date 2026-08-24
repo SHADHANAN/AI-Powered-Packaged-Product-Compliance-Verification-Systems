@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import List, Union
+from typing import List, Optional, Union
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -40,6 +40,12 @@ class Settings(BaseSettings):
     MAX_UPLOAD_SIZE_BYTES: int = 10 * 1024 * 1024  # 10 MB default
     ALLOWED_IMAGE_EXTENSIONS: List[str] = [".jpg", ".jpeg", ".png", ".webp"]
     ALLOWED_IMAGE_MIME_TYPES: List[str] = ["image/jpeg", "image/png", "image/webp"]
+
+    # OCR Configuration
+    OCR_ENGINE: str = "tesseract"
+    OCR_LANGUAGE: str = "eng"
+    OCR_TIMEOUT_SECONDS: int = 30
+    TESSERACT_CMD: Optional[str] = None
 
     # Server Configuration
     HOST: str = "0.0.0.0"
