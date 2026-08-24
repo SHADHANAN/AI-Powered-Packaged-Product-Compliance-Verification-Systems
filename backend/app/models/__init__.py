@@ -1,1 +1,5 @@
-"""Models package placeholder for future database models."""
+"""Database models module."""
+
+from app.models.base import Base
+
+__all__ = ["Base"]

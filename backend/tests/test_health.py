@@ -2,12 +2,21 @@ from fastapi.testclient import TestClient
 
 
 def test_health_check_endpoint(client: TestClient):
-    """Test GET /api/health returns 200 with correct payload."""
+    """Test GET /api/health returns 200 with correct payload (Phase 1 contract preserved)."""
     response = client.get("/api/health")
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "healthy"
     assert data["service"] == "product-compliance-backend"
+
+
+def test_database_health_endpoint(client: TestClient):
+    """Test GET /api/health/db returns 200 and connectivity status."""
+    response = client.get("/api/health/db")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] in ["connected", "disconnected"]
+    assert data["database"] == "postgresql"
 
 
 def test_root_endpoint(client: TestClient):
@@ -43,6 +52,7 @@ def test_openapi_schema(client: TestClient):
     assert "info" in data
     assert "paths" in data
     assert "/api/health" in data["paths"]
+    assert "/api/health/db" in data["paths"]
 
 
 def test_not_found_exception_handling(client: TestClient):

@@ -27,6 +27,9 @@ class Settings(BaseSettings):
         "http://127.0.0.1:5173",
     ]
 
+    # Database Configuration
+    DATABASE_URL: str = "postgresql+psycopg://postgres:postgres@localhost:5432/product_compliance"
+
     # Server Configuration
     HOST: str = "0.0.0.0"
     PORT: int = 8000
