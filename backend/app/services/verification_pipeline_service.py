@@ -5,10 +5,10 @@ from typing import List
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models.enums import VerificationStatus
+from app.models.enums import AuditAction, VerificationStatus
 from app.models.extracted_field import ExtractedField
 from app.models.verification import Verification
-from app.services import field_extraction_service, ocr_service
+from app.services import audit_service, field_extraction_service, ocr_service
 from app.utils.exceptions import BadRequestException, NotFoundException
 from app.utils.logging import get_logger
 
@@ -20,8 +20,8 @@ def process_verification(db: Session, verification_id: uuid.UUID) -> Verificatio
     
     1. Validates verification and image existence.
     2. Updates status to PROCESSING.
-    3. Runs OCR text extraction.
-    4. Extracts structured label fields.
+    3. Runs OCR text extraction and records audit event.
+    4. Extracts structured label fields and records audit event.
     5. Cleans prior run artifacts and persists new ExtractedField records.
     6. Updates status to COMPLETED (or FAILED on error).
     """
@@ -43,6 +43,16 @@ def process_verification(db: Session, verification_id: uuid.UUID) -> Verificatio
         # Step 1: Run OCR on preprocessed image
         raw_text = ocr_service.extract_text_from_image(image_path)
         verification.ocr_raw_text = raw_text
+
+        # Audit event for OCR
+        audit_service.create_audit_log(
+            db=db,
+            verification_id=verification.id,
+            user_id=verification.inspector_id,
+            action=AuditAction.OCR_PROCESSED,
+            status="SUCCESS",
+            details=f"Extracted {len(raw_text)} characters from product image",
+        )
 
         # Step 2: Extract structured fields
         field_items = field_extraction_service.extract_fields_from_text(raw_text)
@@ -67,6 +77,17 @@ def process_verification(db: Session, verification_id: uuid.UUID) -> Verificatio
         verification.completed_at = datetime.now(timezone.utc)
         db.commit()
         db.refresh(verification)
+
+        # Audit event for field extraction
+        audit_service.create_audit_log(
+            db=db,
+            verification_id=verification.id,
+            user_id=verification.inspector_id,
+            action=AuditAction.FIELDS_EXTRACTED,
+            status="SUCCESS",
+            details=f"Extracted {len(field_items)} structured label fields",
+        )
+
         logger.info(f"Verification '{verification_id}' pipeline completed successfully with {len(field_items)} fields")
         return verification
 

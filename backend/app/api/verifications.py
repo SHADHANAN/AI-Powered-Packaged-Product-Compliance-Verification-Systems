@@ -5,11 +5,18 @@ from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
 from app.database import get_db
+from app.models.enums import AuditAction
 from app.models.user import User
+from app.schemas.audit_log import AuditLogRead
+from app.schemas.compliance_check import ComplianceSummaryRead
 from app.schemas.extracted_field import ExtractedFieldRead
+from app.schemas.report import ComplianceReportData
 from app.schemas.verification import VerificationCreate, VerificationRead
 from app.services import (
+    audit_service,
+    compliance_engine,
     image_service,
+    report_service,
     verification_pipeline_service,
     verification_service,
 )
@@ -48,7 +55,19 @@ def upload_verification_image(
             product_id=product_id,
             inspector_id=current_user.id,
         )
-        return verification_service.create_verification(db=db, verification_in=verification_in)
+        created_verification = verification_service.create_verification(db=db, verification_in=verification_in)
+
+        # 4. Record audit event
+        audit_service.create_audit_log(
+            db=db,
+            verification_id=created_verification.id,
+            user_id=current_user.id,
+            action=AuditAction.IMAGE_UPLOADED,
+            status="SUCCESS",
+            details=f"Uploaded product image '{file.filename}' ({len(image_bytes)} bytes)",
+        )
+
+        return created_verification
     except Exception:
         image_service.delete_image_file(stored_path)
         raise
@@ -84,6 +103,94 @@ def get_verification_extracted_fields(
 ) -> List[ExtractedFieldRead]:
     """Retrieve all ExtractedField records created for a verification run."""
     return verification_pipeline_service.get_verification_fields(db=db, verification_id=id)
+
+
+@router.post(
+    "/{id}/compliance",
+    response_model=ComplianceSummaryRead,
+    status_code=status.HTTP_200_OK,
+    summary="Evaluate Product Compliance",
+    description="Evaluate extracted product label fields against Legal Metrology compliance rules and calculate overall score.",
+)
+def evaluate_compliance(
+    id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ComplianceSummaryRead:
+    """Run Legal Metrology rule evaluation engine on verification fields."""
+    return compliance_engine.evaluate_verification_compliance(
+        db=db,
+        verification_id=id,
+        user_id=current_user.id,
+    )
+
+
+@router.get(
+    "/{id}/compliance",
+    response_model=ComplianceSummaryRead,
+    status_code=status.HTTP_200_OK,
+    summary="Get Compliance Evaluation Results",
+    description="Retrieve evaluated Legal Metrology rule check results, overall score, and recommendations for a verification run.",
+)
+def get_compliance_results(
+    id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ComplianceSummaryRead:
+    """Retrieve existing compliance check outcomes and overall compliance score."""
+    return compliance_engine.get_verification_compliance_summary(db=db, verification_id=id)
+
+
+@router.post(
+    "/{id}/report",
+    response_model=ComplianceReportData,
+    status_code=status.HTTP_200_OK,
+    summary="Generate Compliance Report",
+    description="Generate or regenerate an audit-ready structured compliance report for a verification run.",
+)
+def generate_report(
+    id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ComplianceReportData:
+    """Generate or update the compliance report for an evaluated verification."""
+    return report_service.generate_compliance_report(
+        db=db,
+        verification_id=id,
+        user_id=current_user.id,
+    )
+
+
+@router.get(
+    "/{id}/report",
+    response_model=ComplianceReportData,
+    status_code=status.HTTP_200_OK,
+    summary="Get Compliance Report",
+    description="Retrieve the latest generated structured compliance report for a verification run.",
+)
+def get_report(
+    id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ComplianceReportData:
+    """Retrieve the latest compliance report for a verification."""
+    return report_service.get_latest_compliance_report(db=db, verification_id=id)
+
+
+@router.get(
+    "/{id}/audit-logs",
+    response_model=List[AuditLogRead],
+    status_code=status.HTTP_200_OK,
+    summary="Get Verification Audit Trail",
+    description="Retrieve chronological audit log events recorded for a verification run.",
+)
+def get_audit_trail(
+    id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> List[AuditLogRead]:
+    """Retrieve chronological audit trail entries for a verification run."""
+    return audit_service.get_verification_audit_logs(db=db, verification_id=id)
 
 
 @router.post(

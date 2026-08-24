@@ -1,11 +1,13 @@
 """Pydantic schemas for data validation and API response serialization."""
 
+from app.schemas.audit_log import AuditLogBase, AuditLogCreate, AuditLogRead
 from app.schemas.auth import LoginRequest, TokenResponse
 from app.schemas.common import ErrorDetail, ErrorResponse, RootResponse
 from app.schemas.compliance_check import (
     ComplianceCheckBase,
     ComplianceCheckCreate,
     ComplianceCheckRead,
+    ComplianceSummaryRead,
 )
 from app.schemas.extracted_field import (
     ExtractedFieldBase,
@@ -20,9 +22,16 @@ from app.schemas.product import (
     ProductUpdate,
 )
 from app.schemas.report import (
+    ComplianceReportData,
     ReportBase,
+    ReportCheck,
     ReportCreate,
+    ReportField,
+    ReportInspectorInfo,
+    ReportProductInfo,
     ReportRead,
+    ReportSummary,
+    ReportViolation,
 )
 from app.schemas.user import (
     UserBase,
@@ -70,8 +79,20 @@ __all__ = [
     "ComplianceCheckBase",
     "ComplianceCheckCreate",
     "ComplianceCheckRead",
+    "ComplianceSummaryRead",
     # Report
     "ReportBase",
     "ReportCreate",
     "ReportRead",
+    "ReportProductInfo",
+    "ReportInspectorInfo",
+    "ReportField",
+    "ReportCheck",
+    "ReportViolation",
+    "ReportSummary",
+    "ComplianceReportData",
+    # AuditLog
+    "AuditLogBase",
+    "AuditLogCreate",
+    "AuditLogRead",
 ]

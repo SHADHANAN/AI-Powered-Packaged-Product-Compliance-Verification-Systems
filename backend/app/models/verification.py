@@ -8,6 +8,7 @@ from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 from app.models.enums import VerificationStatus
 
 if TYPE_CHECKING:
+    from app.models.audit_log import AuditLog
     from app.models.compliance_check import ComplianceCheck
     from app.models.extracted_field import ExtractedField
     from app.models.product import Product
@@ -62,6 +63,11 @@ class Verification(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     )
     reports: Mapped[List["Report"]] = relationship(
         "Report",
+        back_populates="verification",
+        cascade="all, delete-orphan",
+    )
+    audit_logs: Mapped[List["AuditLog"]] = relationship(
+        "AuditLog",
         back_populates="verification",
         cascade="all, delete-orphan",
     )

@@ -13,6 +13,8 @@ Production-oriented FastAPI backend for automated packaged product Legal Metrolo
 - **Phase 5 (Security & JWT Auth)**: Argon2id password hashing, JWT Bearer authentication (`POST /api/auth/login`, `GET /api/auth/me`), `get_current_user` dependency.
 - **Phase 6 (Image Upload Pipeline)**: Authenticated multi-format product image upload, binary validation, path-traversal prevention, atomic file rollback, and verification record creation.
 - **Phase 7 (OCR & Field Extraction Pipeline)**: Deterministic image preprocessing with Pillow, pluggable Tesseract OCR extraction with graceful local fallback, Legal Metrology regex extraction heuristics, and persistent `ExtractedField` storage.
+- **Phase 8 (Compliance Rule Engine)**: Deterministic Legal Metrology rule evaluation engine, severity weighting, automated score calculation (0-100%), violation/recommendation generation, and persistent `ComplianceCheck` storage.
+- **Phase 9 Step 1 (Compliance Reports & Audit Trail)**: Audit-ready structured compliance report generation, idempotency handling, and comprehensive chronological verification audit logging.
 
 ---
 
@@ -21,60 +23,37 @@ Production-oriented FastAPI backend for automated packaged product Legal Metrolo
 ```text
 User (Inspector/Admin)
  │
+ ├── AuditLog (1..N Verification Lifecycle Events)
+ │
  └── Verification
        │
        ├── Product (Packaged Commodity)
        ├── ExtractedField (1..N OCR Extracted Key-Values)
        ├── ComplianceCheck (1..N Rule Evaluation Results)
-       └── Report (1..N Generated Export Documents)
+       ├── Report (1..N Generated Export Documents)
+       └── AuditLog (1..N Verification Lifecycle Events)
 ```
 
 ---
 
-## Phase 7: OCR & Field Extraction Pipeline
+## Phase 9 Step 1: Compliance Report & Audit Trail
 
-### Pipeline Flow
+### Structured Report Content
+A generated compliance report provides an aggregated snapshot of:
+- **Metadata**: Report ID, Verification ID, Generation timestamp, Verification status (`COMPLETED`).
+- **Product Details**: Generic product name, brand, manufacturer, country of origin, net quantity, MRP, batch number.
+- **Inspector Identity**: Sanitized inspector profile (ID, name, email, role - zero credential leakage).
+- **Summary**: Total rules evaluated, passed, failed, warning, and not-applicable counts with the overall percentage score.
+- **Extracted Fields**: Structured key-values with confidence and OCR source text.
+- **Rules & Violations**: Complete evaluation outcomes with affected fields, expected vs detected values, and corrective recommendations.
 
-```text
-Verification (Status: PENDING)
-        ↓
-POST /api/verifications/{id}/process (JWT Auth)
-        ↓
-Status updated to PROCESSING
-        ↓
-Load Stored Image (uploads/images/<uuid>.<ext>)
-        ↓
-Pillow Image Preprocessing (Grayscale, Resize, Contrast, Sharpness)
-        ↓
-Tesseract OCR Text Extraction
-        ↓
-Verification.ocr_raw_text updated
-        ↓
-Structured Field Extraction (Legal Metrology regex heuristics)
-        ↓
-Persist ExtractedField records (with confidence 0.0-1.0 and source text)
-        ↓
-Status updated to COMPLETED (or FAILED on error)
-        ↓
-Return VerificationRead
-```
-
-### Supported Extracted Fields
-
-| Field Name | Description | Example Extracted Value |
-| :--- | :--- | :--- |
-| `mrp` | Maximum Retail Price | `299.00` |
-| `net_quantity` | Net Quantity & Unit | `500 g` |
-| `quantity_unit` | Isolated Measurement Unit | `g`, `ml`, `kg`, `pcs` |
-| `batch_number` | Batch / Lot Identification | `B-2024/09A` |
-| `manufacturing_date` | Manufacturing / Packaging Date | `15/08/2024` |
-| `import_date` | Importation Date | `10/2024` |
-| `country_of_origin` | Country of Origin Declaration | `India` |
-| `manufacturer` | Name and Address of Manufacturer | `HealthFoods India Ltd, Bangalore` |
-| `importer` | Name and Address of Importer | `Global Imports Ltd, Mumbai` |
-| `customer_care_details`| Consumer Care Email / Phone / Address | `care@brandfoods.com / 1800-111-2222` |
-| `product_name` | Declared Name of Commodity | `Crunchy Almond Granola` |
-| `brand_name` | Brand / Trademark Identifier | `NutriBite` |
+### Audit Trail Events
+The system automatically logs chronological lifecycle events for every verification run:
+1. `IMAGE_UPLOADED`: Stored image binary with size and sanitized filename.
+2. `OCR_PROCESSED`: Completed text extraction with character count.
+3. `FIELDS_EXTRACTED`: Extracted structured Legal Metrology label fields.
+4. `COMPLIANCE_CHECKED`: Evaluated regulatory compliance rules with score.
+5. `REPORT_GENERATED`: Generated structured audit-ready compliance report.
 
 ---
 
@@ -84,10 +63,15 @@ Return VerificationRead
 - `POST /api/auth/login`: Authenticate with email/password to obtain JWT Bearer token.
 - `GET /api/auth/me`: Retrieve current authenticated user profile.
 
-### Verification & Processing
+### Verification, OCR, Compliance & Reports
 - `POST /api/verifications/upload`: Upload packaged product image (`multipart/form-data`) -> `201 Created`.
 - `POST /api/verifications/{id}/process`: Run OCR and field extraction pipeline on uploaded image -> `200 OK`.
 - `GET /api/verifications/{id}/fields`: Retrieve all structured fields extracted for a verification -> `200 OK`.
+- `POST /api/verifications/{id}/compliance`: Evaluate compliance rules and calculate overall score -> `200 OK`.
+- `GET /api/verifications/{id}/compliance`: Retrieve evaluated rule check results and summary -> `200 OK`.
+- `POST /api/verifications/{id}/report`: Generate/regenerate structured compliance report -> `200 OK`.
+- `GET /api/verifications/{id}/report`: Retrieve the latest generated compliance report -> `200 OK`.
+- `GET /api/verifications/{id}/audit-logs`: Retrieve chronological audit events for verification -> `200 OK`.
 
 ### CRUD Endpoints
 - `Users`: `POST /api/users`, `GET /api/users`, `GET /api/users/{id}`, `DELETE /api/users/{id}`
@@ -102,7 +86,7 @@ Return VerificationRead
 
 ## Running Automated Tests
 
-Run the complete 96-test verification suite:
+Run the complete 117-test verification suite:
 
 ```bash
 pytest -v

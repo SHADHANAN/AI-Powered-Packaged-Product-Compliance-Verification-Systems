@@ -36,3 +36,12 @@ class ReportType(str, enum.Enum):
     """Supported export report formats."""
     PDF = "pdf"
     EXCEL = "excel"
+
+
+class AuditAction(str, enum.Enum):
+    """Action tracked in the verification audit trail."""
+    IMAGE_UPLOADED = "IMAGE_UPLOADED"
+    OCR_PROCESSED = "OCR_PROCESSED"
+    FIELDS_EXTRACTED = "FIELDS_EXTRACTED"
+    COMPLIANCE_CHECKED = "COMPLIANCE_CHECKED"
+    REPORT_GENERATED = "REPORT_GENERATED"

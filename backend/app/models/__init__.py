@@ -1,8 +1,10 @@
 """Database models and enums package."""
 
+from app.models.audit_log import AuditLog
 from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 from app.models.compliance_check import ComplianceCheck
 from app.models.enums import (
+    AuditAction,
     ComplianceStatus,
     ReportType,
     Severity,
@@ -25,9 +27,11 @@ __all__ = [
     "ExtractedField",
     "ComplianceCheck",
     "Report",
+    "AuditLog",
     "UserRole",
     "VerificationStatus",
     "ComplianceStatus",
     "Severity",
     "ReportType",
+    "AuditAction",
 ]

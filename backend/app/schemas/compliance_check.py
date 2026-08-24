@@ -1,9 +1,9 @@
 import uuid
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models.enums import ComplianceStatus, Severity
+from app.models.enums import ComplianceStatus, Severity, VerificationStatus
 
 
 class ComplianceCheckBase(BaseModel):
@@ -31,5 +31,23 @@ class ComplianceCheckRead(ComplianceCheckBase):
     id: uuid.UUID
     created_at: datetime
     updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ComplianceSummaryRead(BaseModel):
+    """Aggregated compliance evaluation summary for a verification run."""
+
+    verification_id: uuid.UUID
+    overall_score: Optional[float] = None
+    status: VerificationStatus
+    total_rules: int = 0
+    passed_rules: int = 0
+    failed_rules: int = 0
+    warning_rules: int = 0
+    not_applicable_rules: int = 0
+    violations: List[ComplianceCheckRead] = []
+    recommendations: List[str] = []
+    checks: List[ComplianceCheckRead] = []
 
     model_config = ConfigDict(from_attributes=True)
