@@ -1,6 +1,6 @@
 import os
 from PIL import Image, ImageEnhance, ImageFilter, ImageOps, UnidentifiedImageError
-
+from app.utils.orientation import detect_orientation, rotate_image_for_ocr
 from app.utils.exceptions import BadRequestException, NotFoundException
 from app.utils.logging import get_logger
 
@@ -85,22 +85,40 @@ def resize_for_ocr(
 
 
 def preprocess_image_for_ocr(image_path: str) -> Image.Image:
-    """Run full deterministic preprocessing pipeline on a stored image."""
+    """Run the complete deterministic preprocessing pipeline for OCR."""
     image = load_image(image_path)
-        # 1. Convert to grayscale
+
+    # 1. Detect orientation before other transformations.
+    rotation = detect_orientation(image_path)
+
+    # 2. Rotate only when orientation detection is reliable.
+    if rotation is not None:
+        image = rotate_image_for_ocr(image, rotation)
+        logger.debug(
+            f"Applied OCR orientation correction: {rotation} degrees"
+        )
+    else:
+        logger.debug(
+            "OCR orientation correction skipped because confidence was insufficient"
+        )
+
+    # 3. Convert to grayscale.
     gray = to_grayscale(image)
 
-    # 2. Resize for OCR
+    # 4. Resize for OCR.
     resized = resize_for_ocr(gray)
 
-    # 3. Reduce small-scale image noise
+    # 5. Reduce image noise.
     denoised = reduce_noise(resized, size=3)
 
-    # 4. Enhance contrast
+    # 6. Enhance contrast.
     contrasted = enhance_contrast(denoised, factor=1.5)
 
-    # 5. Enhance sharpness
+    # 7. Enhance sharpness.
     sharp = enhance_sharpness(contrasted, factor=1.2)
-    
-    logger.debug(f"Preprocessed image '{image_path}' -> {sharp.size}")
+
+    logger.debug(
+        f"Preprocessed image '{image_path}' -> {sharp.size}"
+    )
+
     return sharp
