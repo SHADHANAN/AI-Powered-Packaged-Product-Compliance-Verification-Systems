@@ -1,6 +1,6 @@
 import subprocess
 from typing import Optional
-
+from PIL import Image
 from app.config import get_settings
 from app.utils.logging import get_logger
 
@@ -88,3 +88,20 @@ def detect_orientation(image_path: str) -> Optional[int]:
             exc_info=True,
         )
         return None
+def rotate_image_for_ocr(image: Image.Image, rotation: int) -> Image.Image:
+    """
+    Rotate an image clockwise by the specified number of degrees.
+
+    Supported rotations:
+        0, 90, 180, 270
+    """
+
+    if rotation not in {0, 90, 180, 270}:
+        raise ValueError("Rotation must be one of: 0, 90, 180, 270")
+
+    if rotation == 0:
+        return image.copy()
+
+    # PIL rotates counter-clockwise, so negate the requested
+    # clockwise rotation.
+    return image.rotate(-rotation, expand=True)
