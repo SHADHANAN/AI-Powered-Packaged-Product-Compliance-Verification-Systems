@@ -27,7 +27,12 @@ def load_image(image_path: str) -> Image.Image:
 def to_grayscale(image: Image.Image) -> Image.Image:
     """Convert an RGB/RGBA image to grayscale (L mode)."""
     return ImageOps.grayscale(image)
+def reduce_noise(image: Image.Image, size: int = 3) -> Image.Image:
+    """Reduce small-scale image noise while preserving text edges."""
+    if size < 3 or size % 2 == 0:
+        raise ValueError("Noise filter size must be an odd value >= 3")
 
+    return image.filter(ImageFilter.MedianFilter(size=size))
 
 def enhance_contrast(image: Image.Image, factor: float = 1.5) -> Image.Image:
     """Enhance contrast of an image to improve OCR legibility."""
