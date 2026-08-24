@@ -1,6 +1,7 @@
 import uuid
 from typing import List
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models.user import User
@@ -9,13 +10,11 @@ from app.utils.exceptions import BadRequestException, NotFoundException
 
 
 def create_user(db: Session, user_in: UserCreate) -> User:
-    """Create and persist a new user."""
-    # Check for duplicate email
+    """Create and persist a new user with duplicate check and rollback safety."""
     existing_user = db.scalar(select(User).where(User.email == user_in.email))
     if existing_user:
         raise BadRequestException(f"User with email '{user_in.email}' already exists")
 
-    # In Phase 4 Step 1, simple hash representation for foundation (auth/hashing fully handled in auth phase)
     user = User(
         name=user_in.name,
         email=user_in.email,
@@ -24,9 +23,16 @@ def create_user(db: Session, user_in: UserCreate) -> User:
         is_active=user_in.is_active,
     )
     db.add(user)
-    db.commit()
-    db.refresh(user)
-    return user
+    try:
+        db.commit()
+        db.refresh(user)
+        return user
+    except IntegrityError as exc:
+        db.rollback()
+        raise BadRequestException(f"User with email '{user_in.email}' already exists") from exc
+    except Exception:
+        db.rollback()
+        raise
 
 
 def get_user(db: Session, user_id: uuid.UUID) -> User:
@@ -44,7 +50,11 @@ def get_users(db: Session) -> List[User]:
 
 
 def delete_user(db: Session, user_id: uuid.UUID) -> None:
-    """Delete a user by primary key ID."""
+    """Delete a user by primary key ID with rollback protection."""
     user = get_user(db, user_id)
     db.delete(user)
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise

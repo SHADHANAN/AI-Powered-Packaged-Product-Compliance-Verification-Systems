@@ -9,12 +9,16 @@ from app.utils.exceptions import NotFoundException
 
 
 def create_product(db: Session, product_in: ProductCreate) -> Product:
-    """Create and persist a new product."""
+    """Create and persist a new product with rollback protection."""
     product = Product(**product_in.model_dump())
     db.add(product)
-    db.commit()
-    db.refresh(product)
-    return product
+    try:
+        db.commit()
+        db.refresh(product)
+        return product
+    except Exception:
+        db.rollback()
+        raise
 
 
 def get_product(db: Session, product_id: uuid.UUID) -> Product:
@@ -32,7 +36,11 @@ def get_products(db: Session) -> List[Product]:
 
 
 def delete_product(db: Session, product_id: uuid.UUID) -> None:
-    """Delete a product by primary key ID."""
+    """Delete a product by primary key ID with rollback protection."""
     product = get_product(db, product_id)
     db.delete(product)
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise

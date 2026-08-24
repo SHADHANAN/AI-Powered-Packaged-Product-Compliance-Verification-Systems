@@ -28,7 +28,7 @@ class User(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     verifications: Mapped[List["Verification"]] = relationship(
         "Verification",
         back_populates="inspector",
-        cascade="all, delete-orphan",
+        passive_deletes=True,
     )
 
     def __repr__(self) -> str:

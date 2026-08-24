@@ -32,7 +32,7 @@ class Product(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     verifications: Mapped[List["Verification"]] = relationship(
         "Verification",
         back_populates="product",
-        cascade="all, delete-orphan",
+        passive_deletes=True,
     )
 
     def __repr__(self) -> str:

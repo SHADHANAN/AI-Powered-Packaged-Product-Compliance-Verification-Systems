@@ -2,6 +2,7 @@ from typing import Any, Optional
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.utils.logging import get_logger
@@ -91,6 +92,34 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     return JSONResponse(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, content=content)
 
 
+async def integrity_exception_handler(request: Request, exc: IntegrityError) -> JSONResponse:
+    """Handle database constraint violations without leaking raw SQL or schema internals."""
+    logger.warning(f"IntegrityError on {request.method} {request.url.path}: {str(exc.orig) if hasattr(exc, 'orig') else str(exc)}")
+    content = {
+        "success": False,
+        "error": {
+            "message": "Database constraint violation. Check for duplicate or conflicting references.",
+            "status_code": status.HTTP_400_BAD_REQUEST,
+            "details": None,
+        },
+    }
+    return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content=content)
+
+
+async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError) -> JSONResponse:
+    """Handle general database errors securely."""
+    logger.error(f"SQLAlchemyError on {request.method} {request.url.path}: {str(exc)}", exc_info=True)
+    content = {
+        "success": False,
+        "error": {
+            "message": "A database operation error occurred. Please try again later.",
+            "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
+            "details": None,
+        },
+    }
+    return JSONResponse(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, content=content)
+
+
 async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Catch-all handler for unhandled exceptions to prevent exposing internals."""
     logger.error(f"Unhandled error on {request.method} {request.url.path}: {str(exc)}", exc_info=True)
@@ -110,4 +139,6 @@ def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(AppException, app_exception_handler)
     app.add_exception_handler(StarletteHTTPException, http_exception_handler)
     app.add_exception_handler(RequestValidationError, validation_exception_handler)
+    app.add_exception_handler(IntegrityError, integrity_exception_handler)
+    app.add_exception_handler(SQLAlchemyError, sqlalchemy_exception_handler)
     app.add_exception_handler(Exception, unhandled_exception_handler)
