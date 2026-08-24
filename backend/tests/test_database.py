@@ -50,6 +50,6 @@ def test_alembic_configuration_validity():
     alembic_cfg = Config("alembic.ini")
     script = ScriptDirectory.from_config(alembic_cfg)
     revisions = list(script.walk_revisions())
-    assert len(revisions) >= 1
+    assert len(revisions) >= 2
     head_rev = script.get_current_head()
-    assert head_rev == "0001_initial_schema"
+    assert head_rev == "0002_create_compliance_models"

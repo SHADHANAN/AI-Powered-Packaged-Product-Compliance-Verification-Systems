@@ -1,5 +1,33 @@
-"""Database models module."""
+"""Database models and enums package."""
 
-from app.models.base import Base
+from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
+from app.models.compliance_check import ComplianceCheck
+from app.models.enums import (
+    ComplianceStatus,
+    ReportType,
+    Severity,
+    UserRole,
+    VerificationStatus,
+)
+from app.models.extracted_field import ExtractedField
+from app.models.product import Product
+from app.models.report import Report
+from app.models.user import User
+from app.models.verification import Verification
 
-__all__ = ["Base"]
+__all__ = [
+    "Base",
+    "TimestampMixin",
+    "UUIDPrimaryKeyMixin",
+    "User",
+    "Product",
+    "Verification",
+    "ExtractedField",
+    "ComplianceCheck",
+    "Report",
+    "UserRole",
+    "VerificationStatus",
+    "ComplianceStatus",
+    "Severity",
+    "ReportType",
+]
