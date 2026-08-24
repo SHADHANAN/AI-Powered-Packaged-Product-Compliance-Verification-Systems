@@ -4,10 +4,16 @@ from fastapi import APIRouter, Depends, File, Form, UploadFile, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
+from app.api.authorization import (
+    require_authenticated_user,
+    require_inspector,
+    verify_verification_ownership,
+)
 from app.api.dependencies import get_current_user
 from app.database import get_db
 from app.models.enums import AuditAction
 from app.models.user import User
+from app.models.verification import Verification
 from app.schemas.audit_log import AuditLogRead
 from app.schemas.compliance_check import ComplianceSummaryRead
 from app.schemas.extracted_field import ExtractedFieldRead
@@ -22,6 +28,7 @@ from app.services import (
     verification_pipeline_service,
     verification_service,
 )
+from app.utils.exceptions import NotFoundException
 from app.utils.file_validation import validate_image_file
 
 router = APIRouter(tags=["Verifications"])
@@ -37,7 +44,7 @@ router = APIRouter(tags=["Verifications"])
 def upload_verification_image(
     file: UploadFile = File(..., description="Packaged product image file (JPG, PNG, WebP, max 10MB)"),
     product_id: Optional[uuid.UUID] = Form(default=None, description="Optional associated product ID"),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_inspector),
     db: Session = Depends(get_db),
 ) -> VerificationRead:
     """Validate, store, and create a Verification record for an uploaded product image."""
@@ -84,10 +91,14 @@ def upload_verification_image(
 )
 def process_verification_pipeline(
     id: uuid.UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_inspector),
     db: Session = Depends(get_db),
 ) -> VerificationRead:
     """Execute OCR and field extraction on an existing verification image."""
+    verification = db.get(Verification, id)
+    if not verification:
+        raise NotFoundException(f"Verification with id '{id}' not found")
+    verify_verification_ownership(verification, current_user)
     return verification_pipeline_service.process_verification(db=db, verification_id=id)
 
 
@@ -100,10 +111,14 @@ def process_verification_pipeline(
 )
 def get_verification_extracted_fields(
     id: uuid.UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_authenticated_user),
     db: Session = Depends(get_db),
 ) -> List[ExtractedFieldRead]:
     """Retrieve all ExtractedField records created for a verification run."""
+    verification = db.get(Verification, id)
+    if not verification:
+        raise NotFoundException(f"Verification with id '{id}' not found")
+    verify_verification_ownership(verification, current_user)
     return verification_pipeline_service.get_verification_fields(db=db, verification_id=id)
 
 
@@ -116,10 +131,14 @@ def get_verification_extracted_fields(
 )
 def evaluate_compliance(
     id: uuid.UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_inspector),
     db: Session = Depends(get_db),
 ) -> ComplianceSummaryRead:
     """Run Legal Metrology rule evaluation engine on verification fields."""
+    verification = db.get(Verification, id)
+    if not verification:
+        raise NotFoundException(f"Verification with id '{id}' not found")
+    verify_verification_ownership(verification, current_user)
     return compliance_engine.evaluate_verification_compliance(
         db=db,
         verification_id=id,
@@ -136,10 +155,14 @@ def evaluate_compliance(
 )
 def get_compliance_results(
     id: uuid.UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_authenticated_user),
     db: Session = Depends(get_db),
 ) -> ComplianceSummaryRead:
     """Retrieve existing compliance check outcomes and overall compliance score."""
+    verification = db.get(Verification, id)
+    if not verification:
+        raise NotFoundException(f"Verification with id '{id}' not found")
+    verify_verification_ownership(verification, current_user)
     return compliance_engine.get_verification_compliance_summary(db=db, verification_id=id)
 
 
@@ -152,10 +175,14 @@ def get_compliance_results(
 )
 def generate_report(
     id: uuid.UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_inspector),
     db: Session = Depends(get_db),
 ) -> ComplianceReportData:
     """Generate or update the compliance report for an evaluated verification."""
+    verification = db.get(Verification, id)
+    if not verification:
+        raise NotFoundException(f"Verification with id '{id}' not found")
+    verify_verification_ownership(verification, current_user)
     return report_service.generate_compliance_report(
         db=db,
         verification_id=id,
@@ -172,10 +199,14 @@ def generate_report(
 )
 def get_report(
     id: uuid.UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_authenticated_user),
     db: Session = Depends(get_db),
 ) -> ComplianceReportData:
     """Retrieve the latest compliance report for a verification."""
+    verification = db.get(Verification, id)
+    if not verification:
+        raise NotFoundException(f"Verification with id '{id}' not found")
+    verify_verification_ownership(verification, current_user)
     return report_service.get_latest_compliance_report(db=db, verification_id=id)
 
 
@@ -187,10 +218,14 @@ def get_report(
 )
 def export_compliance_report_pdf(
     id: uuid.UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_authenticated_user),
     db: Session = Depends(get_db),
 ) -> StreamingResponse:
     """Generate and stream a publication-grade PDF compliance report."""
+    verification = db.get(Verification, id)
+    if not verification:
+        raise NotFoundException(f"Verification with id '{id}' not found")
+    verify_verification_ownership(verification, current_user)
     pdf_stream = pdf_report_service.generate_compliance_pdf(
         db=db,
         verification_id=id,
@@ -215,10 +250,14 @@ def export_compliance_report_pdf(
 )
 def get_audit_trail(
     id: uuid.UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_authenticated_user),
     db: Session = Depends(get_db),
 ) -> List[AuditLogRead]:
     """Retrieve chronological audit trail entries for a verification run."""
+    verification = db.get(Verification, id)
+    if not verification:
+        raise NotFoundException(f"Verification with id '{id}' not found")
+    verify_verification_ownership(verification, current_user)
     return audit_service.get_verification_audit_logs(db=db, verification_id=id)
 
 

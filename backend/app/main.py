@@ -1,7 +1,8 @@
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
-from fastapi import FastAPI, status
+from fastapi import FastAPI, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 from app.api import api_router
 from app.config import get_settings
@@ -11,6 +12,18 @@ from app.utils.logging import get_logger, setup_logging
 
 settings = get_settings()
 logger = get_logger("app.main")
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Middleware that injects essential HTTP security headers into all responses."""
+
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "no-referrer"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        return response
 
 
 @asynccontextmanager
@@ -36,6 +49,9 @@ def create_application() -> FastAPI:
         openapi_url=f"{settings.API_PREFIX}/openapi.json",
         lifespan=lifespan,
     )
+
+    # Configure Security Headers Middleware
+    app.add_middleware(SecurityHeadersMiddleware)
 
     # Configure CORS middleware
     app.add_middleware(

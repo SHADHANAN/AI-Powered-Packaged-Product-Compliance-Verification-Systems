@@ -58,6 +58,17 @@ class UnauthorizedException(AppException):
         )
 
 
+class ForbiddenException(AppException):
+    """Exception raised when an authenticated user has insufficient permissions."""
+
+    def __init__(self, message: str = "Access forbidden: insufficient permissions", details: Optional[Any] = None):
+        super().__init__(
+            message=message,
+            status_code=status.HTTP_403_FORBIDDEN,
+            details=details,
+        )
+
+
 class PayloadTooLargeException(AppException):
     """Exception raised when uploaded payload or file exceeds maximum allowed size."""
 
