@@ -87,18 +87,20 @@ def resize_for_ocr(
 def preprocess_image_for_ocr(image_path: str) -> Image.Image:
     """Run full deterministic preprocessing pipeline on a stored image."""
     image = load_image(image_path)
-    
-    # 1. Convert to RGB / Grayscale
+        # 1. Convert to grayscale
     gray = to_grayscale(image)
 
-    # 2. Resize if necessary
+    # 2. Resize for OCR
     resized = resize_for_ocr(gray)
 
-    # 3. Enhance contrast
-    contrasted = enhance_contrast(resized, factor=1.5)
+    # 3. Reduce small-scale image noise
+    denoised = reduce_noise(resized, size=3)
 
-    # 4. Enhance sharpness
+    # 4. Enhance contrast
+    contrasted = enhance_contrast(denoised, factor=1.5)
+
+    # 5. Enhance sharpness
     sharp = enhance_sharpness(contrasted, factor=1.2)
-
+    
     logger.debug(f"Preprocessed image '{image_path}' -> {sharp.size}")
     return sharp
