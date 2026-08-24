@@ -1,6 +1,7 @@
 import uuid
 from typing import List, Optional
 from fastapi import APIRouter, Depends, File, Form, UploadFile, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
@@ -16,6 +17,7 @@ from app.services import (
     audit_service,
     compliance_engine,
     image_service,
+    pdf_report_service,
     report_service,
     verification_pipeline_service,
     verification_service,
@@ -175,6 +177,33 @@ def get_report(
 ) -> ComplianceReportData:
     """Retrieve the latest compliance report for a verification."""
     return report_service.get_latest_compliance_report(db=db, verification_id=id)
+
+
+@router.get(
+    "/{id}/report/pdf",
+    status_code=status.HTTP_200_OK,
+    summary="Export Compliance Report as PDF",
+    description="Export the evaluated verification compliance report as an audit-grade PDF document.",
+)
+def export_compliance_report_pdf(
+    id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> StreamingResponse:
+    """Generate and stream a publication-grade PDF compliance report."""
+    pdf_stream = pdf_report_service.generate_compliance_pdf(
+        db=db,
+        verification_id=id,
+        user_id=current_user.id,
+    )
+    headers = {
+        "Content-Disposition": f'attachment; filename="compliance_report_{id}.pdf"',
+    }
+    return StreamingResponse(
+        content=pdf_stream,
+        media_type="application/pdf",
+        headers=headers,
+    )
 
 
 @router.get(

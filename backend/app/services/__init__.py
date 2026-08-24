@@ -1,4 +1,4 @@
-"""Services module packaging database operations, authentication, storage, OCR, extraction, compliance rule engine, reports, and audit trail."""
+"""Services module packaging database operations, authentication, storage, OCR, extraction, compliance rule engine, reports, PDF export, and audit trail."""
 
 from app.services import (
     audit_service,
@@ -10,6 +10,7 @@ from app.services import (
     field_extraction_service,
     image_service,
     ocr_service,
+    pdf_report_service,
     product_service,
     report_service,
     user_service,
@@ -32,4 +33,5 @@ __all__ = [
     "extracted_field_service",
     "compliance_check_service",
     "report_service",
+    "pdf_report_service",
 ]

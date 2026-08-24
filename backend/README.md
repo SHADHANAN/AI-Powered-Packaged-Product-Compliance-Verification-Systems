@@ -15,6 +15,7 @@ Production-oriented FastAPI backend for automated packaged product Legal Metrolo
 - **Phase 7 (OCR & Field Extraction Pipeline)**: Deterministic image preprocessing with Pillow, pluggable Tesseract OCR extraction with graceful local fallback, Legal Metrology regex extraction heuristics, and persistent `ExtractedField` storage.
 - **Phase 8 (Compliance Rule Engine)**: Deterministic Legal Metrology rule evaluation engine, severity weighting, automated score calculation (0-100%), violation/recommendation generation, and persistent `ComplianceCheck` storage.
 - **Phase 9 Step 1 (Compliance Reports & Audit Trail)**: Audit-ready structured compliance report generation, idempotency handling, and comprehensive chronological verification audit logging.
+- **Phase 9 Step 2 (PDF Compliance Report Export)**: Publication-grade PDF document rendering using ReportLab Platypus, dynamic two-pass page numbering, running headers/footers, grayscale readability, streaming download endpoint, and zero credential leakage.
 
 ---
 
@@ -36,16 +37,34 @@ User (Inspector/Admin)
 
 ---
 
-## Phase 9 Step 1: Compliance Report & Audit Trail
+## Phase 9 Step 2: PDF Compliance Report Export
 
-### Structured Report Content
-A generated compliance report provides an aggregated snapshot of:
-- **Metadata**: Report ID, Verification ID, Generation timestamp, Verification status (`COMPLETED`).
-- **Product Details**: Generic product name, brand, manufacturer, country of origin, net quantity, MRP, batch number.
-- **Inspector Identity**: Sanitized inspector profile (ID, name, email, role - zero credential leakage).
-- **Summary**: Total rules evaluated, passed, failed, warning, and not-applicable counts with the overall percentage score.
-- **Extracted Fields**: Structured key-values with confidence and OCR source text.
-- **Rules & Violations**: Complete evaluation outcomes with affected fields, expected vs detected values, and corrective recommendations.
+### Architecture Pipeline
+```text
+Verification
+    ↓
+Extracted Fields
+    ↓
+Compliance Rule Engine
+    ↓
+Compliance Report Data
+    ↓
+PDF Generation Service (ReportLab Platypus)
+    ↓
+StreamingResponse (application/pdf)
+```
+
+### PDF Report Sections
+1. **Report Header**: Verification title, report ID, verification ID, generation timestamp, and verification status.
+2. **Product Information**: Brand name, generic product name, manufacturer, importer, and country of origin.
+3. **Inspector Information**: Name, official email, role, and inspector ID (strictly no credentials or password hashes).
+4. **Compliance Summary**: Percentage score badge, total rules, pass/fail/warning/not applicable breakdown.
+5. **Extracted Label Information**: Clean structured table of all OCR-extracted attributes with confidence levels and source text.
+6. **Legal Metrology Rule Checks**: Rule-by-rule evaluation results with severity levels, status badges, actual vs expected values, formatted for high contrast and grayscale printing.
+7. **Detected Violations**: Actionable non-conformity list with specific Legal Metrology requirements.
+8. **Corrective Recommendations**: Actionable items for regulatory compliance.
+9. **Audit Trail History**: Chronological verification lifecycle actions with timestamps and statuses.
+10. **Statutory Disclaimer**: Formal regulatory statement.
 
 ### Audit Trail Events
 The system automatically logs chronological lifecycle events for every verification run:
@@ -54,6 +73,7 @@ The system automatically logs chronological lifecycle events for every verificat
 3. `FIELDS_EXTRACTED`: Extracted structured Legal Metrology label fields.
 4. `COMPLIANCE_CHECKED`: Evaluated regulatory compliance rules with score.
 5. `REPORT_GENERATED`: Generated structured audit-ready compliance report.
+6. `REPORT_PDF_EXPORTED`: Streamed compliance report as PDF document.
 
 ---
 
@@ -63,7 +83,7 @@ The system automatically logs chronological lifecycle events for every verificat
 - `POST /api/auth/login`: Authenticate with email/password to obtain JWT Bearer token.
 - `GET /api/auth/me`: Retrieve current authenticated user profile.
 
-### Verification, OCR, Compliance & Reports
+### Verification, OCR, Compliance, Reports & PDF Export
 - `POST /api/verifications/upload`: Upload packaged product image (`multipart/form-data`) -> `201 Created`.
 - `POST /api/verifications/{id}/process`: Run OCR and field extraction pipeline on uploaded image -> `200 OK`.
 - `GET /api/verifications/{id}/fields`: Retrieve all structured fields extracted for a verification -> `200 OK`.
@@ -71,7 +91,19 @@ The system automatically logs chronological lifecycle events for every verificat
 - `GET /api/verifications/{id}/compliance`: Retrieve evaluated rule check results and summary -> `200 OK`.
 - `POST /api/verifications/{id}/report`: Generate/regenerate structured compliance report -> `200 OK`.
 - `GET /api/verifications/{id}/report`: Retrieve the latest generated compliance report -> `200 OK`.
+- `GET /api/verifications/{id}/report/pdf`: Stream/download publication-grade PDF report -> `200 OK` (`application/pdf`).
 - `GET /api/verifications/{id}/audit-logs`: Retrieve chronological audit events for verification -> `200 OK`.
+
+### PDF Export Example
+```http
+GET /api/verifications/7b324bf8-e4b2-4ea5-b46a-73db59f33b1e/report/pdf HTTP/1.1
+Host: localhost:8000
+Authorization: Bearer <JWT_ACCESS_TOKEN>
+
+HTTP/1.1 200 OK
+Content-Type: application/pdf
+Content-Disposition: attachment; filename="compliance_report_7b324bf8-e4b2-4ea5-b46a-73db59f33b1e.pdf"
+```
 
 ### CRUD Endpoints
 - `Users`: `POST /api/users`, `GET /api/users`, `GET /api/users/{id}`, `DELETE /api/users/{id}`
@@ -86,7 +118,7 @@ The system automatically logs chronological lifecycle events for every verificat
 
 ## Running Automated Tests
 
-Run the complete 117-test verification suite:
+Run the complete 125-test verification suite:
 
 ```bash
 pytest -v
