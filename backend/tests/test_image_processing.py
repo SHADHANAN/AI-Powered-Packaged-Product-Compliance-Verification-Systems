@@ -1,0 +1,27 @@
+from PIL import Image
+
+from app.utils.image_processing import resize_for_ocr
+
+
+def test_resize_for_ocr_upscales_small_image():
+    image = Image.new("L", (400, 200))
+
+    resized = resize_for_ocr(image)
+
+    assert resized.size == (2400, 1200)
+
+
+def test_resize_for_ocr_downscales_large_image():
+    image = Image.new("L", (4800, 2400))
+
+    resized = resize_for_ocr(image)
+
+    assert resized.size == (2400, 1200)
+
+
+def test_resize_for_ocr_preserves_supported_size():
+    image = Image.new("L", (1600, 1200))
+
+    resized = resize_for_ocr(image)
+
+    assert resized.size == (1600, 1200)

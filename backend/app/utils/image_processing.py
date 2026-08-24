@@ -41,21 +41,37 @@ def enhance_sharpness(image: Image.Image, factor: float = 1.3) -> Image.Image:
     return enhancer.enhance(factor)
 
 
-def resize_for_ocr(image: Image.Image, min_dimension: int = 800, max_dimension: int = 2400) -> Image.Image:
-    """Scale small images up or very large images down for optimal OCR processing."""
-    width, height = image.size
-    min_side = min(width, height)
-    max_side = max(width, height)
+def resize_for_ocr(
+    image: Image.Image,
+    min_dimension: int = 1200,
+    max_dimension: int = 2400,
+) -> Image.Image:
+    """Resize an image to an OCR-friendly range while preserving aspect ratio."""
 
-    if min_side < min_dimension and min_side > 0:
-        scale = min_dimension / min_side
-        new_size = (int(width * scale), int(height * scale))
-        return image.resize(new_size, Image.Resampling.LANCZOS)
-    elif max_side > max_dimension:
-        scale = max_dimension / max_side
-        new_size = (int(width * scale), int(height * scale))
-        return image.resize(new_size, Image.Resampling.LANCZOS)
-    return image
+    width, height = image.size
+
+    if width <= 0 or height <= 0:
+        return image
+
+    shortest_side = min(width, height)
+    longest_side = max(width, height)
+
+    # Upscale small images so small label text has enough pixels.
+    if shortest_side < min_dimension:
+        scale = min_dimension / shortest_side
+    # Downscale very large images to avoid unnecessary OCR cost.
+    elif longest_side > max_dimension:
+        scale = max_dimension / longest_side
+    else:
+        return image
+
+    new_width = max(1, round(width * scale))
+    new_height = max(1, round(height * scale))
+
+    return image.resize(
+        (new_width, new_height),
+        Image.Resampling.LANCZOS,
+    )
 
 
 def preprocess_image_for_ocr(image_path: str) -> Image.Image:
