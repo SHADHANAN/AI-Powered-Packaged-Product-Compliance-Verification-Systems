@@ -35,16 +35,21 @@ def reduce_noise(image: Image.Image, size: int = 3) -> Image.Image:
     return image.filter(ImageFilter.MedianFilter(size=size))
 
 def enhance_contrast(image: Image.Image, factor: float = 1.5) -> Image.Image:
-    """Enhance contrast of an image to improve OCR legibility."""
+    """Enhance image contrast for OCR while validating the enhancement factor."""
+    if factor <= 0:
+        raise ValueError("Contrast factor must be greater than zero")
+
     enhancer = ImageEnhance.Contrast(image)
     return enhancer.enhance(factor)
 
 
 def enhance_sharpness(image: Image.Image, factor: float = 1.3) -> Image.Image:
-    """Enhance sharpness of an image."""
+    """Enhance image sharpness for OCR while validating the enhancement factor."""
+    if factor <= 0:
+        raise ValueError("Sharpness factor must be greater than zero")
+
     enhancer = ImageEnhance.Sharpness(image)
     return enhancer.enhance(factor)
-
 
 def resize_for_ocr(
     image: Image.Image,

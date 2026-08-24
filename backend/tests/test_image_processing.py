@@ -46,3 +46,45 @@ def test_reduce_noise_rejects_invalid_filter_size():
         assert False, "Expected ValueError for even filter size"
     except ValueError:
         pass
+from app.utils.image_processing import (
+    enhance_contrast,
+    enhance_sharpness,
+)
+
+
+def test_enhance_contrast_preserves_image_properties():
+    image = Image.new("L", (800, 600), color=128)
+
+    enhanced = enhance_contrast(image, factor=1.5)
+
+    assert enhanced.size == image.size
+    assert enhanced.mode == image.mode
+
+
+def test_enhance_sharpness_preserves_image_properties():
+    image = Image.new("L", (800, 600), color=128)
+
+    enhanced = enhance_sharpness(image, factor=1.3)
+
+    assert enhanced.size == image.size
+    assert enhanced.mode == image.mode
+
+
+def test_enhance_contrast_rejects_invalid_factor():
+    image = Image.new("L", (100, 100))
+
+    try:
+        enhance_contrast(image, factor=0)
+        assert False, "Expected ValueError"
+    except ValueError:
+        pass
+
+
+def test_enhance_sharpness_rejects_invalid_factor():
+    image = Image.new("L", (100, 100))
+
+    try:
+        enhance_sharpness(image, factor=-1)
+        assert False, "Expected ValueError"
+    except ValueError:
+        pass
