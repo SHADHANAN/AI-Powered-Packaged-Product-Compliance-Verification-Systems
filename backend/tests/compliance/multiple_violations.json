@@ -1,0 +1,33 @@
+{
+  "suite_name": "Multiple Simultaneous Violations Scenarios",
+  "description": "Tests compliance evaluations where several mandatory packaging rules fail simultaneously.",
+  "test_cases": [
+    {
+      "case_id": "MULT_001_MULTIPLE_FAILS",
+      "description": "Product with missing address, illegal zero price, and non-standard quantity",
+      "input": {
+        "product_name": "Generic Corn Flakes",
+        "manufacturer_name": "Cereal Mills Ltd",
+        "net_quantity": "500 boxes",
+        "mrp": "₹0.00",
+        "mfg_date": "08/2026",
+        "customer_care": "care@cereal.com"
+      },
+      "expected": {
+        "overall_status": "NON_COMPLIANT",
+        "risk_level": "HIGH",
+        "failed": 2,
+        "warnings": 1,
+        "rule_statuses": {
+          "LM001": "PASS",
+          "LM002": "PASS",
+          "LM003": "FAIL",
+          "LM004": "WARNING",
+          "LM005": "FAIL",
+          "LM006": "PASS",
+          "LM007": "PASS"
+        }
+      }
+    }
+  ]
+}

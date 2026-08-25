@@ -1,0 +1,34 @@
+{
+  "suite_name": "Low OCR Confidence Scenarios",
+  "description": "Verifies that declarations detected below the confidence threshold return WARNING and trigger manual verification.",
+  "test_cases": [
+    {
+      "case_id": "OCR_001_LOW_CONFIDENCE_MRP",
+      "description": "Product where MRP is detected with 0.45 confidence (threshold: 0.75)",
+      "input": {
+        "product_name": "Haldiram's Bhujia Sev",
+        "manufacturer_name": "Haldiram Snacks Pvt Ltd",
+        "complete_address": "B-1/H-8, Mohan Co-op Industrial Estate, Main Mathura Road, New Delhi 110044",
+        "net_quantity": "200 g",
+        "mrp": {
+          "value": "₹55.00",
+          "confidence": 0.45
+        },
+        "mfg_date": "08/2026",
+        "customer_care": "care@haldirams.com",
+        "country_of_origin": "India"
+      },
+      "context": {
+        "confidence_threshold": 0.75
+      },
+      "expected": {
+        "overall_status": "PARTIALLY_COMPLIANT",
+        "warnings": 1,
+        "failed": 0,
+        "rule_statuses": {
+          "LM005": "WARNING"
+        }
+      }
+    }
+  ]
+}

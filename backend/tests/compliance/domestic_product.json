@@ -1,0 +1,31 @@
+{
+  "suite_name": "Domestic Product Compliance Scenarios",
+  "description": "Verifies that domestic products treat imported rules (LM008, LM009) as NOT_APPLICABLE.",
+  "test_cases": [
+    {
+      "case_id": "DOM_001_STANDARD",
+      "description": "Domestic packaged product from India",
+      "input": {
+        "product_name": "Parle-G Original Gluco Biscuits",
+        "manufacturer_name": "Parle Products Pvt Ltd",
+        "complete_address": "North Level Crossing, Vile Parle East, Mumbai 400057",
+        "net_quantity": "800 g",
+        "mrp": "₹90",
+        "mfg_date": "08/2026",
+        "customer_care": "cs@parle.biz / 1800-222-777",
+        "country_of_origin": "India",
+        "product_category": "domestic"
+      },
+      "expected": {
+        "overall_status": "COMPLIANT",
+        "compliance_score": 100.0,
+        "risk_level": "LOW",
+        "not_applicable": 4,
+        "rule_statuses": {
+          "LM008": "NOT_APPLICABLE",
+          "LM009": "NOT_APPLICABLE"
+        }
+      }
+    }
+  ]
+}

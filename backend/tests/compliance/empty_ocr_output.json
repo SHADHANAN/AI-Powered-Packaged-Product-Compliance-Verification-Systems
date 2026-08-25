@@ -1,0 +1,27 @@
+{
+  "suite_name": "Empty OCR Output Scenarios",
+  "description": "Tests compliance engine behavior when no fields could be extracted by OCR (empty input).",
+  "test_cases": [
+    {
+      "case_id": "EMPTY_001_BLANK",
+      "description": "Completely empty input dictionary",
+      "input": {},
+      "expected": {
+        "overall_status": "NON_COMPLIANT",
+        "compliance_score": 0.0,
+        "risk_level": "HIGH",
+        "passed": 0,
+        "failed": 7,
+        "rule_statuses": {
+          "LM001": "FAIL",
+          "LM002": "FAIL",
+          "LM003": "FAIL",
+          "LM004": "FAIL",
+          "LM005": "FAIL",
+          "LM006": "FAIL",
+          "LM007": "FAIL"
+        }
+      }
+    }
+  ]
+}

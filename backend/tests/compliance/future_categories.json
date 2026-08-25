@@ -1,0 +1,54 @@
+{
+  "suite_name": "Future Product Categories Scenarios",
+  "description": "Tests sectoral categories like cosmetics, electronics, and food products.",
+  "test_cases": [
+    {
+      "case_id": "FUT_001_ELECTRONICS",
+      "description": "Electronics product declaring model and power specifications (LM011)",
+      "input": {
+        "product_name": "Smart LED Table Lamp",
+        "manufacturer_name": "Lumina Electronics Pvt Ltd",
+        "complete_address": "Sector 62, Noida, Uttar Pradesh 201309",
+        "net_quantity": "1 N",
+        "mrp": "₹1,299",
+        "mfg_date": "08/2026",
+        "technical_specs": "Model: LM-101, 12W, Input 220V 50Hz",
+        "customer_care": "help@lumina.in",
+        "product_category": "electronics"
+      },
+      "expected": {
+        "overall_status": "COMPLIANT",
+        "compliance_score": 100.0,
+        "risk_level": "LOW",
+        "rule_statuses": {
+          "LM011": "PASS",
+          "LM010": "NOT_APPLICABLE"
+        }
+      }
+    },
+    {
+      "case_id": "FUT_002_COSMETICS",
+      "description": "Cosmetic item declaring best before / use before date (LM010)",
+      "input": {
+        "product_name": "Hydrating Aloe Vera Moisturizer",
+        "manufacturer_name": "Glow Naturals Ltd",
+        "complete_address": "Dehradun, Uttarakhand 248001",
+        "net_quantity": "100 ml",
+        "mrp": "₹299",
+        "mfg_date": "04/2026",
+        "expiry_date": "04/2028",
+        "customer_care": "care@glownaturals.com",
+        "product_category": "cosmetic"
+      },
+      "expected": {
+        "overall_status": "COMPLIANT",
+        "compliance_score": 100.0,
+        "risk_level": "LOW",
+        "rule_statuses": {
+          "LM010": "PASS",
+          "LM011": "NOT_APPLICABLE"
+        }
+      }
+    }
+  ]
+}

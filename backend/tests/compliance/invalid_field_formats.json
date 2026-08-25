@@ -1,0 +1,72 @@
+{
+  "suite_name": "Invalid Field Formats Scenarios",
+  "description": "Validates packages with unparseable, zero/negative, or non-standard Legal Metrology values.",
+  "test_cases": [
+    {
+      "case_id": "INV_001_ZERO_MRP",
+      "description": "Commodity declaring MRP as 0.00 or free",
+      "input": {
+        "product_name": "Sample Promotional Snack",
+        "manufacturer_name": "Snack Co Ltd",
+        "complete_address": "Indore, Madhya Pradesh",
+        "net_quantity": "50 g",
+        "mrp": "₹0.00",
+        "mfg_date": "08/2026",
+        "customer_care": "1800-000-111",
+        "country_of_origin": "India"
+      },
+      "expected": {
+        "overall_status": "NON_COMPLIANT",
+        "risk_level": "HIGH",
+        "failed": 1,
+        "rule_statuses": {
+          "LM005": "FAIL"
+        }
+      }
+    },
+    {
+      "case_id": "INV_002_NON_STANDARD_UNIT",
+      "description": "Commodity declaring net quantity with non-standard metric unit (e.g., 2 baskets / boxes)",
+      "input": {
+        "product_name": "Assorted Dry Fruits Gift Pack",
+        "manufacturer_name": "Royal Dryfruits Ltd",
+        "complete_address": "Jaipur, Rajasthan 302001",
+        "net_quantity": "2 baskets",
+        "mrp": "₹999",
+        "mfg_date": "08/2026",
+        "customer_care": "care@royaldryfruits.com",
+        "country_of_origin": "India"
+      },
+      "expected": {
+        "overall_status": "PARTIALLY_COMPLIANT",
+        "warnings": 1,
+        "failed": 0,
+        "rule_statuses": {
+          "LM004": "WARNING"
+        }
+      }
+    },
+    {
+      "case_id": "INV_003_UNPARSEABLE_DATE",
+      "description": "Commodity declaring date in non-standard textual format (e.g., Freshly Made)",
+      "input": {
+        "product_name": "Fresh Bakery Bread",
+        "manufacturer_name": "Daily Bake Ltd",
+        "complete_address": "Bengaluru, Karnataka 560025",
+        "net_quantity": "400 g",
+        "mrp": "₹45",
+        "mfg_date": "Freshly Baked Today",
+        "customer_care": "bake@daily.com",
+        "country_of_origin": "India"
+      },
+      "expected": {
+        "overall_status": "PARTIALLY_COMPLIANT",
+        "warnings": 1,
+        "failed": 0,
+        "rule_statuses": {
+          "LM006": "WARNING"
+        }
+      }
+    }
+  ]
+}
