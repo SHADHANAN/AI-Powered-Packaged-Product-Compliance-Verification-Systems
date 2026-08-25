@@ -72,19 +72,56 @@ def evaluate_verification_compliance(
     evaluation_results: List[RuleEvaluationResult] = []
     ai_success = False
 
+    ai_status = "DISABLED"
+    fallback_used = False
+    decision_source = "Deterministic Engine"
+
     settings = get_settings()
     if settings.AI_ENABLED:
         try:
             from app.ai.security import validate_untrusted_text, PromptInjectionException, record_security_event
-            for key, val in field_map.items():
-                if val:
-                    validate_untrusted_text(str(val), context=f"Compliance field '{key}'")
+            # 1. Prompt Injection check
+            try:
+                for key, val in field_map.items():
+                    if val:
+                        validate_untrusted_text(str(val), context=f"Compliance field '{key}'")
+            except PromptInjectionException as e:
+                ai_status = "PROMPT_INJECTION_BLOCKED"
+                record_security_event(db, verification_id, details="Prompt injection attempt blocked during compliance evaluation.")
+                raise e
 
+            # 2. Call AI service
             from app.services.ai_service import AIService
             ai_evaluations = AIService().evaluate_compliance(field_map, ALL_RULES)
             
+            # 3. Validate AI evaluations structure and confidence
+            if not ai_evaluations or not isinstance(ai_evaluations, list):
+                raise ValueError("validation failure: AI response did not return a valid list of rule evaluations")
+                
             for item in ai_evaluations:
-                # Convert string status and severity to enums
+                if not isinstance(item, dict):
+                    raise ValueError("validation failure: AI response item is not a dictionary")
+                
+                # Check confidence threshold (low confidence check)
+                if "confidence" in item:
+                    try:
+                        conf_val = float(item["confidence"])
+                        if conf_val < 0.7:
+                            raise ValueError("low confidence: AI confidence score is below threshold")
+                    except (TypeError, ValueError) as c_err:
+                        if "low confidence" in str(c_err):
+                            raise c_err
+                
+                # Check required rule fields
+                rule_code = item.get("rule_code")
+                status_str = item.get("status")
+                if not rule_code:
+                    raise ValueError("validation failure: missing rule_code in AI response")
+                if not status_str or status_str.upper() not in ["PASS", "FAIL", "WARNING", "NOT_APPLICABLE"]:
+                    raise ValueError("validation failure: invalid status in AI response")
+            
+            # 4. Map evaluations to RuleEvaluationResult
+            for item in ai_evaluations:
                 status_str = item.get("status", "warning").lower()
                 try:
                     status_enum = ComplianceStatus(status_str)
@@ -110,18 +147,38 @@ def evaluate_verification_compliance(
                     )
                 )
             
-            # Verify we received evaluations
             if evaluation_results:
                 ai_success = True
+                ai_status = "SUCCESS"
+                fallback_used = False
+                decision_source = "AI Assistant"
                 logger.info(f"AI compliance evaluation successful for verification '{verification_id}'")
         except Exception as e:
+            fallback_used = True
+            decision_source = "Deterministic Engine (Fallback)"
+            
+            # Map exception to appropriate ai_status
+            import json
+            err_str = str(e).lower()
+            if "timeout" in err_str:
+                ai_status = "TIMEOUT"
+            elif "unavailable" in err_str or "connection" in err_str or "http" in err_str or "request failed" in err_str:
+                ai_status = "API_UNAVAILABLE"
+            elif isinstance(e, json.JSONDecodeError) or "json" in err_str or "decode" in err_str or "malformed" in err_str or "expecting value" in err_str:
+                ai_status = "MALFORMED_JSON"
+            elif "validation failure" in err_str:
+                ai_status = "VALIDATION_FAILURE"
+            elif "low confidence" in err_str:
+                ai_status = "LOW_CONFIDENCE"
+            elif "prompt injection" in err_str or "security validation failed" in err_str:
+                ai_status = "PROMPT_INJECTION_BLOCKED"
+            else:
+                ai_status = "PROVIDER_ERROR"
+                
             logger.warning(
-                f"AI compliance evaluation failed for verification '{verification_id}', falling back to deterministic engine: {e}",
+                f"AI compliance evaluation failed ({ai_status}) for verification '{verification_id}', falling back to deterministic engine: {e}",
                 exc_info=True
             )
-            # Record security event
-            if "Security validation failed" in str(e) or "prompt injection" in str(e).lower() or isinstance(e, PromptInjectionException):
-                record_security_event(db, verification_id, details="Prompt injection attempt blocked during compliance evaluation.")
             evaluation_results = []
 
     if not ai_success:
@@ -160,6 +217,18 @@ def evaluate_verification_compliance(
         # 3. Update Verification entity
         verification.overall_score = overall_score
         verification.status = VerificationStatus.COMPLETED
+        # Set AI tracking attributes
+        verification.ai_status = ai_status
+        verification.fallback_used = fallback_used
+        verification.decision_source = decision_source
+        
+        has_fail = any(c.status == ComplianceStatus.FAIL for c in created_checks)
+        has_warn = any(c.status == ComplianceStatus.WARNING for c in created_checks)
+        if has_fail or has_warn:
+            verification.final_result = "NON_COMPLIANT"
+        else:
+            verification.final_result = "COMPLIANT"
+
         db.commit()
         db.refresh(verification)
 
@@ -218,6 +287,14 @@ def build_compliance_summary(
     violations = [c for c in check_reads if c.status in (ComplianceStatus.FAIL, ComplianceStatus.WARNING)]
     recommendations = [c.recommendation for c in check_reads if c.recommendation]
 
+    # Calculate final_result if not set (or use model attribute)
+    final_res = getattr(verification, "final_result", None)
+    if not final_res:
+        if failed_count > 0 or warning_count > 0:
+            final_res = "NON_COMPLIANT"
+        else:
+            final_res = "COMPLIANT"
+
     return ComplianceSummaryRead(
         verification_id=verification.id,
         overall_score=verification.overall_score,
@@ -230,4 +307,8 @@ def build_compliance_summary(
         violations=violations,
         recommendations=recommendations,
         checks=check_reads,
+        ai_status=getattr(verification, "ai_status", "DISABLED") or "DISABLED",
+        fallback_used=bool(getattr(verification, "fallback_used", False)),
+        decision_source=getattr(verification, "decision_source", "Deterministic Engine") or "Deterministic Engine",
+        final_result=final_res,
     )

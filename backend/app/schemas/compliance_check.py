@@ -49,5 +49,9 @@ class ComplianceSummaryRead(BaseModel):
     violations: List[ComplianceCheckRead] = []
     recommendations: List[str] = []
     checks: List[ComplianceCheckRead] = []
+    ai_status: Optional[str] = None
+    fallback_used: Optional[bool] = None
+    decision_source: Optional[str] = None
+    final_result: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)

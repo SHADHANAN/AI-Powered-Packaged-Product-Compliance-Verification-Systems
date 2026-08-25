@@ -47,6 +47,10 @@ class Verification(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     source_image_path: Mapped[str] = mapped_column(String(1000), nullable=False)
     ocr_raw_text: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    ai_status: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    fallback_used: Mapped[Optional[bool]] = mapped_column(nullable=True)
+    decision_source: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    final_result: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
 
     # Relationships
     product: Mapped[Optional["Product"]] = relationship("Product", back_populates="verifications")
