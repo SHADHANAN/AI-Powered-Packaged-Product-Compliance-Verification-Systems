@@ -14,7 +14,7 @@ const navItems = [
     ),
   },
   {
-    label: 'Upload',
+    label: 'Upload Product',
     path: '/upload',
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
@@ -23,7 +23,7 @@ const navItems = [
     ),
   },
   {
-    label: 'Verification',
+    label: 'Compliance Verification',
     path: '/verification',
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
@@ -32,7 +32,7 @@ const navItems = [
     ),
   },
   {
-    label: 'Reports',
+    label: 'Audit Reports',
     path: '/reports',
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
@@ -41,7 +41,7 @@ const navItems = [
     ),
   },
   {
-    label: 'History',
+    label: 'Verification History',
     path: '/history',
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
@@ -52,13 +52,13 @@ const navItems = [
 ];
 
 const ROLE_VARIANTS = {
-  ADMIN:     'danger',
-  INSPECTOR: 'info',
-  VIEWER:    'neutral',
+  ADMIN: 'danger',
+  INSPECTOR: 'accent',
+  VIEWER: 'neutral',
 };
 
 /**
- * Sidebar navigation with active-state highlighting, user info panel, and logout.
+ * Premium Deep Navy Glass Sidebar with glowing active navigation indicators.
  */
 const Sidebar = ({ isOpen, onClose }) => {
   const { user, logout, isAuthenticated } = useAuth();
@@ -68,8 +68,8 @@ const Sidebar = ({ isOpen, onClose }) => {
     ? user.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
     : user?.email?.[0]?.toUpperCase() || 'U';
 
-  const displayName = user?.name || user?.email || 'User';
-  const role = user?.role || '';
+  const displayName = user?.name || user?.email || 'Authorized Officer';
+  const role = user?.role || 'INSPECTOR';
 
   const handleLogout = () => {
     onClose?.();
@@ -88,71 +88,76 @@ const Sidebar = ({ isOpen, onClose }) => {
       {/* Mobile backdrop overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-40 bg-surface-950/30 backdrop-blur-sm lg:hidden animate-fade-in"
+          className="fixed inset-0 z-40 bg-navy-950/60 backdrop-blur-sm lg:hidden animate-fade-in"
           onClick={onClose}
           aria-hidden="true"
         />
       )}
 
-      {/* Sidebar panel */}
+      {/* Sidebar Panel */}
       <aside
         className={`
           fixed top-16 left-0 z-40 h-[calc(100vh-4rem)] w-64
-          bg-white border-r border-surface-100 shadow-sm
+          glass-sidebar text-slate-200
           transition-transform duration-300 ease-out
           lg:translate-x-0 lg:static lg:shadow-none
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
       >
-        <nav className="flex flex-col gap-1 p-4 h-full custom-scrollbar overflow-y-auto">
-          <div className="mb-2 px-3">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-surface-400">
-              Navigation
-            </p>
+        <nav className="flex flex-col gap-1 p-4 h-full custom-scrollbar overflow-y-auto justify-between">
+          <div className="space-y-1">
+            <div className="mb-3 px-3">
+              <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
+                Compliance Modules
+              </p>
+            </div>
+
+            {navItems.map((item) => {
+              const active = isNavActive(item);
+              return (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  onClick={onClose}
+                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 group
+                    ${
+                      active
+                        ? 'bg-gradient-to-r from-primary-600/90 to-indigo-600/80 text-white shadow-glow-primary border border-indigo-400/30'
+                        : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                    }`}
+                >
+                  <span
+                    className={`transition-colors ${
+                      active ? 'text-cyan-300' : 'text-slate-400 group-hover:text-cyan-300'
+                    }`}
+                  >
+                    {item.icon}
+                  </span>
+                  <span>{item.label}</span>
+                  {active && (
+                    <span className="ml-auto w-2 h-2 rounded-full bg-cyan-400 shadow-glow-accent animate-pulse-soft" />
+                  )}
+                </NavLink>
+              );
+            })}
           </div>
 
-          {navItems.map((item) => {
-            const active = isNavActive(item);
-            return (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group
-                  ${active
-                    ? 'bg-primary-50 text-primary-700 shadow-sm'
-                    : 'text-surface-600 hover:bg-surface-50 hover:text-surface-900'
-                  }`}
-              >
-                <span className={`transition-colors ${active ? 'text-primary-600' : 'text-surface-400 group-hover:text-surface-600'}`}>
-                  {item.icon}
-                </span>
-                {item.label}
-                {active && (
-                  <span className="ml-auto w-1.5 h-1.5 rounded-full bg-primary-500" />
-                )}
-              </NavLink>
-            );
-          })}
-
-          {/* Bottom: user info + logout */}
-          <div className="mt-auto pt-4 border-t border-surface-100 space-y-2">
+          {/* Bottom: Inspector Card & Logout */}
+          <div className="pt-4 border-t border-white/10 space-y-3">
             {isAuthenticated && user && (
-              <div className="px-3 py-2.5 rounded-xl bg-surface-50 border border-surface-100">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center shrink-0">
+              <div className="p-3 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center shrink-0 shadow-sm">
                     <span className="text-xs font-bold text-white">{initials}</span>
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-semibold text-surface-800 truncate">{displayName}</p>
-                    {user.email && (
-                      <p className="text-[11px] text-surface-500 truncate">{user.email}</p>
-                    )}
-                    {role && (
-                      <Badge variant={ROLE_VARIANTS[role] || 'neutral'} size="sm" className="mt-1">
+                    <p className="text-xs font-bold text-white truncate">{displayName}</p>
+                    <p className="text-[10px] text-slate-400 truncate">{user.email || 'Inspector'}</p>
+                    <div className="mt-1">
+                      <Badge variant={ROLE_VARIANTS[role] || 'accent'} size="xs">
                         {role}
                       </Badge>
-                    )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -161,14 +166,17 @@ const Sidebar = ({ isOpen, onClose }) => {
             <button
               id="sidebar-logout-button"
               onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium
-                text-danger-600 hover:bg-danger-50 transition-colors"
+              className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold
+                text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 transition-all border border-transparent hover:border-rose-500/20"
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-                <path strokeLinecap="round" strokeLinejoin="round"
-                  d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9"
+                />
               </svg>
-              Sign out
+              Sign Out
             </button>
           </div>
         </nav>

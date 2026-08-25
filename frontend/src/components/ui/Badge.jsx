@@ -1,10 +1,10 @@
 /**
- * Status badge with semantic color variants.
+ * Premium Status badge with glassmorphism, glowing indicator dots, and crisp typography.
  *
- * @param {'info'|'success'|'warning'|'danger'|'neutral'|'primary'} variant
- * @param {'sm'|'md'|'lg'} size
- * @param {boolean} dot — shows a status indicator dot
- * @param {boolean} pulse — animates the dot
+ * @param {'info'|'success'|'warning'|'danger'|'neutral'|'primary'|'accent'} variant
+ * @param {'xs'|'sm'|'md'|'lg'} size
+ * @param {boolean} dot — shows an indicator status dot
+ * @param {boolean} pulse — animates the status dot with a soft ping
  */
 const Badge = ({
   children,
@@ -16,53 +16,56 @@ const Badge = ({
   ...props
 }) => {
   const variantStyles = {
-    info: 'bg-primary-50 text-primary-700 ring-primary-200',
-    success: 'bg-accent-50 text-accent-700 ring-accent-200',
-    warning: 'bg-warning-50 text-warning-700 ring-warning-200',
-    danger: 'bg-danger-50 text-danger-700 ring-danger-200',
-    neutral: 'bg-surface-100 text-surface-600 ring-surface-200',
-    primary: 'bg-primary-600 text-white ring-primary-400',
+    info: 'bg-primary-50/80 text-primary-700 border border-primary-200/90 shadow-sm',
+    primary: 'bg-gradient-to-r from-primary-600 to-indigo-600 text-white border border-indigo-400/40 shadow-sm',
+    accent: 'bg-accent-50/90 text-accent-800 border border-accent-200/90 shadow-sm',
+    success: 'bg-emerald-50/90 text-emerald-800 border border-emerald-200/90 shadow-sm',
+    warning: 'bg-amber-50/90 text-amber-800 border border-amber-200/90 shadow-sm',
+    danger: 'bg-rose-50/90 text-rose-800 border border-rose-200/90 shadow-sm',
+    neutral: 'bg-slate-100/90 text-slate-700 border border-slate-200/80 shadow-sm',
   };
 
   const dotColors = {
-    info: 'bg-primary-500',
-    success: 'bg-accent-500',
-    warning: 'bg-warning-500',
-    danger: 'bg-danger-500',
-    neutral: 'bg-surface-400',
+    info: 'bg-primary-500 shadow-glow-primary',
     primary: 'bg-white',
+    accent: 'bg-accent-500 shadow-glow-accent',
+    success: 'bg-emerald-500 shadow-glow-success',
+    warning: 'bg-amber-500',
+    danger: 'bg-rose-500 shadow-glow-danger',
+    neutral: 'bg-slate-400',
   };
 
   const sizeStyles = {
-    sm: 'px-2 py-0.5 text-xs',
-    md: 'px-2.5 py-1 text-xs',
-    lg: 'px-3 py-1 text-sm',
+    xs: 'px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider',
+    sm: 'px-2.5 py-0.5 text-xs font-semibold',
+    md: 'px-3 py-1 text-xs font-semibold',
+    lg: 'px-3.5 py-1 text-sm font-semibold',
   };
 
   return (
     <span
       className={`
-        inline-flex items-center gap-1.5 font-medium rounded-full
-        ring-1 ring-inset transition-colors duration-200
-        ${variantStyles[variant]}
-        ${sizeStyles[size]}
+        inline-flex items-center gap-1.5 rounded-full
+        transition-all duration-200 backdrop-blur-md
+        ${variantStyles[variant] || variantStyles.neutral}
+        ${sizeStyles[size] || sizeStyles.md}
         ${className}
       `}
       {...props}
     >
       {dot && (
-        <span className="relative flex h-2 w-2">
+        <span className="relative flex h-2 w-2 shrink-0">
           {pulse && (
             <span
-              className={`absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping ${dotColors[variant]}`}
+              className={`absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping ${dotColors[variant] || 'bg-slate-400'}`}
             />
           )}
           <span
-            className={`relative inline-flex rounded-full h-2 w-2 ${dotColors[variant]}`}
+            className={`relative inline-flex rounded-full h-2 w-2 ${dotColors[variant] || 'bg-slate-400'}`}
           />
         </span>
       )}
-      {children}
+      <span>{children}</span>
     </span>
   );
 };

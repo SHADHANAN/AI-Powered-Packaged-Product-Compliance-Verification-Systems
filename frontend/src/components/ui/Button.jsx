@@ -2,36 +2,31 @@ import { forwardRef } from 'react';
 
 const variantStyles = {
   primary:
-    'bg-primary-600 text-white hover:bg-primary-700 focus-visible:ring-primary-500 shadow-sm hover:shadow-md',
+    'bg-gradient-to-r from-primary-600 to-indigo-600 text-white hover:from-primary-500 hover:to-indigo-500 shadow-sm hover:shadow-glow-primary focus-visible:ring-primary-500 border border-indigo-400/30',
   secondary:
-    'bg-surface-100 text-surface-700 hover:bg-surface-200 focus-visible:ring-surface-400 border border-surface-200',
+    'bg-white/80 text-navy-800 hover:bg-white hover:text-navy-950 focus-visible:ring-primary-400 border border-slate-200/80 shadow-sm hover:shadow-md backdrop-blur-md',
   accent:
-    'bg-accent-600 text-white hover:bg-accent-700 focus-visible:ring-accent-500 shadow-sm hover:shadow-md',
+    'bg-gradient-to-r from-accent-600 to-cyan-500 text-white hover:from-accent-500 hover:to-cyan-400 shadow-sm hover:shadow-glow-accent focus-visible:ring-accent-400 border border-cyan-400/30',
+  success:
+    'bg-gradient-to-r from-success-600 to-emerald-600 text-white hover:from-success-500 hover:to-emerald-500 shadow-sm hover:shadow-glow-success focus-visible:ring-success-500 border border-emerald-400/30',
   danger:
-    'bg-danger-600 text-white hover:bg-danger-700 focus-visible:ring-danger-500 shadow-sm hover:shadow-md',
+    'bg-gradient-to-r from-danger-600 to-rose-600 text-white hover:from-danger-500 hover:to-rose-500 shadow-sm hover:shadow-glow-danger focus-visible:ring-danger-500 border border-rose-400/30',
   ghost:
-    'bg-transparent text-surface-600 hover:bg-surface-100 focus-visible:ring-surface-400',
+    'bg-transparent text-navy-600 hover:bg-slate-100/80 hover:text-navy-900 focus-visible:ring-primary-400',
   outline:
-    'bg-transparent text-primary-600 border-2 border-primary-500 hover:bg-primary-50 focus-visible:ring-primary-500',
+    'bg-transparent text-primary-600 border border-primary-300 hover:bg-primary-50/60 hover:border-primary-400 focus-visible:ring-primary-500',
 };
 
 const sizeStyles = {
-  xs: 'px-2.5 py-1 text-xs rounded-md gap-1',
-  sm: 'px-3 py-1.5 text-sm rounded-lg gap-1.5',
-  md: 'px-4 py-2 text-sm rounded-lg gap-2',
-  lg: 'px-5 py-2.5 text-base rounded-xl gap-2',
-  xl: 'px-6 py-3 text-lg rounded-xl gap-2.5',
+  xs: 'px-2.5 py-1 text-xs rounded-lg gap-1 font-medium',
+  sm: 'px-3.5 py-1.5 text-xs sm:text-sm rounded-xl gap-1.5 font-semibold',
+  md: 'px-4 py-2 text-sm rounded-xl gap-2 font-semibold',
+  lg: 'px-5 py-2.5 text-base rounded-xl gap-2.5 font-semibold',
+  xl: 'px-6 py-3 text-lg rounded-2xl gap-3 font-bold',
 };
 
 /**
- * Reusable Button component with multiple variants and sizes.
- *
- * @param {'primary'|'secondary'|'accent'|'danger'|'ghost'|'outline'} variant
- * @param {'xs'|'sm'|'md'|'lg'|'xl'} size
- * @param {boolean} loading — shows a spinner and disables the button
- * @param {boolean} fullWidth
- * @param {React.ReactNode} leftIcon
- * @param {React.ReactNode} rightIcon
+ * Premium Reusable Button component with glassmorphism, micro-interactions, and gradient glow.
  */
 const Button = forwardRef(
   (
@@ -58,13 +53,13 @@ const Button = forwardRef(
         type={type}
         disabled={isDisabled}
         className={`
-          inline-flex items-center justify-center font-medium
+          inline-flex items-center justify-center
           transition-all duration-200 ease-out
           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
           disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none
-          active:scale-[0.97]
-          ${variantStyles[variant]}
-          ${sizeStyles[size]}
+          active:scale-[0.98]
+          ${variantStyles[variant] || variantStyles.primary}
+          ${sizeStyles[size] || sizeStyles.md}
           ${fullWidth ? 'w-full' : ''}
           ${className}
         `}
@@ -72,7 +67,7 @@ const Button = forwardRef(
       >
         {loading ? (
           <svg
-            className="animate-spin h-4 w-4"
+            className="animate-spin h-4 w-4 text-current"
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
@@ -94,7 +89,7 @@ const Button = forwardRef(
         ) : (
           leftIcon
         )}
-        {children}
+        <span>{children}</span>
         {!loading && rightIcon}
       </button>
     );

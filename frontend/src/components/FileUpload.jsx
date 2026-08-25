@@ -2,18 +2,7 @@ import { useState, useRef, useCallback } from 'react';
 import { UPLOAD_CONFIG } from '../utils/constants';
 
 /**
- * FileUpload — Reusable Drag & Drop image upload component.
- *
- * Supports:
- * - Drag-and-drop with active drag-over indicator
- * - Keyboard accessible file picker
- * - Client-side validation (MIME type, size limit, non-empty)
- * - Clean user-friendly error callback
- *
- * @param {Function} onFileSelect - Called with valid File object
- * @param {Function} onError - Called with error message string
- * @param {boolean} disabled - Disables interaction during upload
- * @param {string} className - Optional container styling
+ * Premium Glassmorphic Drag & Drop image upload component.
  */
 const FileUpload = ({
   onFileSelect,
@@ -24,17 +13,14 @@ const FileUpload = ({
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Validate selected file against requirements
   const validateFile = useCallback((file) => {
     if (!file) return false;
 
-    // Check empty file
     if (file.size === 0) {
       onError?.('The selected file is empty. Please choose a valid image.');
       return false;
     }
 
-    // Check file type
     const isAllowedType = UPLOAD_CONFIG.ALLOWED_MIME_TYPES.includes(file.type.toLowerCase()) ||
       /\.(jpe?g|png|webp)$/i.test(file.name);
 
@@ -43,7 +29,6 @@ const FileUpload = ({
       return false;
     }
 
-    // Check file size (10 MB maximum)
     if (file.size > UPLOAD_CONFIG.MAX_FILE_SIZE_BYTES) {
       onError?.(`Image size exceeds the ${UPLOAD_CONFIG.MAX_FILE_SIZE_MB} MB limit. Please select a smaller file.`);
       return false;
@@ -54,21 +39,16 @@ const FileUpload = ({
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (validateFile(file)) {
-        onFileSelect?.(file);
-      }
+    if (file && validateFile(file)) {
+      onFileSelect?.(file);
     }
-    // Reset file input value so selecting the same file again triggers onChange
     e.target.value = '';
   };
 
   const handleDragOver = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!disabled) {
-      setIsDragOver(true);
-    }
+    if (!disabled) setIsDragOver(true);
   };
 
   const handleDragLeave = (e) => {
@@ -81,21 +61,15 @@ const FileUpload = ({
     e.preventDefault();
     e.stopPropagation();
     setIsDragOver(false);
-
     if (disabled) return;
-
     const file = e.dataTransfer.files?.[0];
-    if (file) {
-      if (validateFile(file)) {
-        onFileSelect?.(file);
-      }
+    if (file && validateFile(file)) {
+      onFileSelect?.(file);
     }
   };
 
   const handleClick = () => {
-    if (!disabled) {
-      fileInputRef.current?.click();
-    }
+    if (!disabled) fileInputRef.current?.click();
   };
 
   const handleKeyDown = (e) => {
@@ -108,7 +82,6 @@ const FileUpload = ({
 
   return (
     <div className={`w-full ${className}`}>
-      {/* Hidden native file input */}
       <input
         ref={fileInputRef}
         type="file"
@@ -120,7 +93,6 @@ const FileUpload = ({
         aria-label="Upload packaged product image"
       />
 
-      {/* Drag and Drop Zone */}
       <div
         role="button"
         tabIndex={disabled ? -1 : 0}
@@ -133,26 +105,19 @@ const FileUpload = ({
         aria-disabled={disabled}
         aria-controls="packaged-product-file-input"
         className={`
-          relative border-2 border-dashed rounded-2xl p-8 sm:p-12 text-center
-          transition-all duration-200 cursor-pointer select-none
-          ${
-            disabled
-              ? 'opacity-60 cursor-not-allowed bg-surface-50 border-surface-200'
-              : isDragOver
-              ? 'border-primary-500 bg-primary-50/60 shadow-glow scale-[1.005]'
-              : 'border-surface-300 bg-white hover:border-primary-400 hover:bg-surface-50/60 hover:shadow-sm'
-          }
+          glass-dropzone relative p-8 sm:p-12 text-center cursor-pointer select-none
+          ${disabled ? 'opacity-60 cursor-not-allowed bg-slate-100/60' : ''}
+          ${isDragOver ? 'drag-active scale-[1.005]' : ''}
         `}
       >
         <div className="flex flex-col items-center justify-center space-y-4">
-          {/* Upload Icon */}
           <div
             className={`
-              w-16 h-16 rounded-2xl flex items-center justify-center transition-transform duration-200
+              w-16 h-16 rounded-2xl flex items-center justify-center transition-all duration-200 shadow-sm
               ${
                 isDragOver
-                  ? 'scale-110 gradient-primary text-white shadow-glow'
-                  : 'bg-primary-50 text-primary-600'
+                  ? 'scale-110 bg-gradient-to-tr from-primary-600 to-cyan-500 text-white shadow-glow-primary'
+                  : 'bg-primary-50 text-primary-600 border border-primary-100'
               }
             `}
           >
@@ -171,32 +136,30 @@ const FileUpload = ({
             </svg>
           </div>
 
-          {/* Prompt Copy */}
           <div className="space-y-1">
-            <p className="text-base font-semibold text-surface-800">
+            <p className="text-base font-bold text-navy-900">
               {isDragOver ? (
-                <span className="text-primary-600">Drop the packaging image here</span>
+                <span className="text-primary-600 font-extrabold">Drop the packaging label image here</span>
               ) : (
                 <>
-                  Drag & drop packaging image, or{' '}
-                  <span className="text-primary-600 underline underline-offset-4 hover:text-primary-700">
+                  Drag & drop packaging label image, or{' '}
+                  <span className="text-primary-600 font-bold underline underline-offset-4 hover:text-primary-700">
                     browse files
                   </span>
                 </>
               )}
             </p>
-            <p className="text-xs text-surface-500 max-w-sm mx-auto">
-              Upload high-resolution label photos showing Legal Metrology declarations, MRP, Batch, & Expiry
+            <p className="text-xs text-slate-500 max-w-sm mx-auto font-normal">
+              High-resolution photo showing statutory declarations (MRP, USP, Net Qty, Dates, Batch, Manufacturer)
             </p>
           </div>
 
-          {/* Format Constraints Badge */}
-          <div className="pt-2 flex flex-wrap items-center justify-center gap-2 text-xs text-surface-400">
-            <span className="px-2.5 py-1 rounded-lg bg-surface-100 font-medium text-surface-600">
+          <div className="pt-2 flex flex-wrap items-center justify-center gap-2 text-xs text-slate-400">
+            <span className="px-3 py-1 rounded-xl bg-white/80 border border-slate-200/80 font-semibold text-slate-700 shadow-sm">
               JPG, PNG, WEBP
             </span>
             <span>•</span>
-            <span>Max {UPLOAD_CONFIG.MAX_FILE_SIZE_MB} MB</span>
+            <span className="font-medium">Max {UPLOAD_CONFIG.MAX_FILE_SIZE_MB} MB</span>
           </div>
         </div>
       </div>
