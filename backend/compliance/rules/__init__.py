@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 RULES_FILE_PATH = Path(__file__).parent / "legal_metrology_rules.json"
+DEFAULT_RULES_PATH = RULES_FILE_PATH
 
 
 def load_legal_metrology_rules() -> Dict[str, Any]:

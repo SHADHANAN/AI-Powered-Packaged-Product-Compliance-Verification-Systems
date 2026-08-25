@@ -2,7 +2,7 @@
 
 Dynamic validation engine that loads Legal Metrology rules configuration and
 validates structured product information using an intelligent four-state validation model
-(PASS, WARNING, FAIL, NOT_APPLICABLE).
+(PASS, WARNING, FAIL, NOT_APPLICABLE) and weighted scoring engine.
 """
 from __future__ import annotations
 
@@ -12,6 +12,9 @@ from pathlib import Path
 import re
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
+from compliance.explanation import ViolationExplanationEngine, get_explanation_engine
+from compliance.recommendation import RecommendationEngine, get_recommendation_engine
+from compliance.scorer import ComplianceScorer, get_compliance_scorer
 from compliance.status import (
     DEFAULT_CONFIDENCE_THRESHOLD,
     ComplianceStatus,
@@ -368,7 +371,7 @@ class ComplianceEngine:
 
     Loads validation rules dynamically and validates structured product data
     extracted from OCR or manual inputs using an intelligent four-state validation
-    model (PASS, WARNING, FAIL, NOT_APPLICABLE).
+    model (PASS, WARNING, FAIL, NOT_APPLICABLE) and weighted scoring engine.
     """
 
     def __init__(
@@ -377,6 +380,7 @@ class ComplianceEngine:
         rules_data: Optional[List[Dict[str, Any]]] = None,
         field_aliases: Optional[Dict[str, List[str]]] = None,
         confidence_threshold: float = DEFAULT_CONFIDENCE_THRESHOLD,
+        custom_weights: Optional[Dict[str, float]] = None,
     ) -> None:
         """Initialize the Compliance Engine.
 
@@ -385,11 +389,15 @@ class ComplianceEngine:
             rules_data: Optional list of rule dictionaries (overrides file loading).
             field_aliases: Optional custom field aliases mapping.
             confidence_threshold: Default OCR confidence threshold (0.0 to 1.0).
+            custom_weights: Optional rule weights overrides.
         """
         self.rules_path = Path(rules_path) if rules_path else DEFAULT_RULES_PATH
         self.field_aliases = field_aliases or DEFAULT_FIELD_ALIASES
         self.confidence_threshold = confidence_threshold
         self.status_evaluator = StatusEvaluator(default_confidence_threshold=confidence_threshold)
+        self.scorer = ComplianceScorer(rules_path=self.rules_path, custom_weights=custom_weights)
+        self.explanation_engine = ViolationExplanationEngine(rules_path=self.rules_path, rules_data=rules_data)
+        self.recommendation_engine = RecommendationEngine(rules_path=self.rules_path, rules_data=rules_data)
 
         self._validators: Dict[str, ValidatorFunc] = {
             "required": validate_required,
@@ -628,8 +636,8 @@ class ComplianceEngine:
             context: Optional contextual dictionary (e.g. is_imported, confidence_threshold).
 
         Returns:
-            Complete validation report with overall_status, results, passed, failed,
-            warnings, and not_applicable counts.
+            Complete validation report with compliance_score, overall_status, risk_level,
+            results, passed, failed, warnings, and not_applicable counts.
         """
         results: List[Dict[str, Any]] = []
         passed = 0
@@ -653,25 +661,32 @@ class ComplianceEngine:
             elif status == ValidationStatus.NOT_APPLICABLE.value:
                 not_applicable += 1
 
-        overall_status_enum = StatusEvaluator.calculate_overall_status(
-            passed=passed,
-            failed=failed,
-            warnings=warnings,
-            not_applicable=not_applicable,
-        )
+        # Calculate weighted scoring & risk assessment
+        score_report = self.scorer.calculate_score(results)
+        explanations = self.explanation_engine.generate_explanations(results)
+        recommendations = self.recommendation_engine.generate_recommendations(results)
 
         report = {
-            "overall_status": overall_status_enum.value,
+            "compliance_score": score_report["compliance_score"],
+            "overall_status": score_report["overall_status"],
+            "risk_level": score_report["risk_level"],
+            "total_applicable_weight": score_report["total_applicable_weight"],
+            "earned_weight": score_report["earned_weight"],
             "results": results,
             "passed": passed,
             "failed": failed,
             "warnings": warnings,
             "not_applicable": not_applicable,
+            "breakdown": score_report["breakdown"],
+            "explanations": explanations,
+            "recommendations": recommendations,
         }
 
         logger.info(
-            "Validation complete: %s (Passed: %d, Failed: %d, Warnings: %d, N/A: %d)",
-            overall_status_enum.value,
+            "Validation complete: Score: %.1f%% (%s, Risk: %s) [Passed: %d, Failed: %d, Warnings: %d, N/A: %d]",
+            report["compliance_score"],
+            report["overall_status"],
+            report["risk_level"],
             passed,
             failed,
             warnings,

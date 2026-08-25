@@ -71,7 +71,7 @@ def test_ocr_confidence_triggers_warning():
         "manufacturer_name": "Tea Estates Ltd",
         "manufacturer_address": "Assam, India",
         "net_quantity": "250 g",
-        "mrp": "Rs. 250",
+        "mrp": {"value": "Rs. 250", "confidence": 0.48},
         "mfg_date": "08/2026",
         "customer_care": "1800-111-222",
         "country_of_origin": "India",
@@ -80,8 +80,9 @@ def test_ocr_confidence_triggers_warning():
     p_name_res_low = next(r for r in report_low["results"] if r["rule_id"] == "LM001")
     assert p_name_res_low["status"] == ValidationStatus.WARNING.value
     assert "OCR confidence (0.52) is below" in p_name_res_low["message"]
-    assert report_low["warnings"] >= 1
+    assert report_low["warnings"] == 2
     assert report_low["overall_status"] == OverallStatus.PARTIALLY_COMPLIANT.value
+    assert report_low["risk_level"] == "MEDIUM"
 
 
 def test_context_confidence_threshold_override():
