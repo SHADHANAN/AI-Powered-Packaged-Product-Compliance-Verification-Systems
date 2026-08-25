@@ -6,6 +6,7 @@ import { ProtectedRoute, PublicRoute } from './ProtectedRoute';
 // Pages
 import Dashboard    from '../pages/Dashboard';
 import Upload       from '../pages/Upload';
+import Extraction   from '../pages/Extraction';
 import Verification from '../pages/Verification';
 import Reports      from '../pages/Reports';
 import History      from '../pages/History';
@@ -31,12 +32,15 @@ const router = createBrowserRouter([
       {
         element: <MainLayout />,
         children: [
-          { path: '/',            element: <Dashboard /> },
-          { path: '/dashboard',   element: <Dashboard /> },
-          { path: '/upload',      element: <Upload /> },
-          { path: '/verification',element: <Verification /> },
-          { path: '/reports',     element: <Reports /> },
-          { path: '/history',     element: <History /> },
+          { path: '/',                    element: <Dashboard /> },
+          { path: '/dashboard',           element: <Dashboard /> },
+          { path: '/upload',              element: <Upload /> },
+          { path: '/extraction',          element: <Extraction /> },
+          { path: '/extraction/:id',      element: <Extraction /> },
+          { path: '/verification',        element: <Verification /> },
+          { path: '/verification/:id',    element: <Verification /> },
+          { path: '/reports',             element: <Reports /> },
+          { path: '/history',             element: <History /> },
         ],
       },
     ],
