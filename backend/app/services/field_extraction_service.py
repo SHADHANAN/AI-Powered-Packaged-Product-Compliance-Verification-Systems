@@ -135,30 +135,66 @@ def extract_fields_from_text(raw_text: str) -> List[Dict[str, Any]]:
         )
 
     # 4. Manufacturing Date
+        # 4. Manufacturing Date
     mfg_match = re.search(
-        r"(?:MFG\s*(?:DATE|DT|ON)?|MFD\s*(?:DATE|DT|ON)?|MFD\.?|MANUFACTURED\s*(?:ON|DATE)?|PKD\s*(?:DATE|DT|ON)?|PKD\.?|PACKED\s*(?:ON|DATE)?)\s*[:\.-]?\s*([0-9]{1,2}[\/\-\.][0-9]{1,2}[\/\-\.][0-9]{2,4}|[0-9]{1,2}[\/\-\.][0-9]{4}|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\s\.\-\/]*[0-9]{2,4})",
+        r"""
+        (?:
+            MFG\s*(?:DATE|DT|ON)?
+            |MFD\s*(?:DATE|DT|ON)?
+            |MANUFACTURED\s*(?:ON|DATE)?
+            |PKD\s*(?:DATE|DT|ON)?
+            |PACKED\s*(?:ON|DATE)?
+            |PACKING\s*DATE
+        )
+        \s*[:.\-]?\s*
+        (
+            [0-9]{1,2}[\/\-\.][0-9]{1,2}[\/\-\.][0-9]{2,4}
+            |
+            [0-9]{1,2}[\/\-\.][0-9]{4}
+            |
+            (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)
+            [a-z]*[\s.\-/]*[0-9]{2,4}
+        )
+        """,
         raw_text,
-        re.IGNORECASE,
+        re.IGNORECASE | re.VERBOSE,
     )
+
     if mfg_match:
         add_field(
             field_name="manufacturing_date",
             field_value=mfg_match.group(1),
-            confidence=0.85,
+            confidence=0.93,
             source_text=mfg_match.group(0),
         )
-
     # 5. Import Date
+        # 5. Import Date
     imp_date_match = re.search(
-        r"(?:IMPORT\s*(?:DATE|DT|ON)?|IMPORTED\s*(?:ON|DATE)?)\s*[:\.-]?\s*([0-9]{1,2}[\/\-\.][0-9]{1,2}[\/\-\.][0-9]{2,4}|[0-9]{1,2}[\/\-\.][0-9]{4}|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\s\.\-\/]*[0-9]{2,4})",
+        r"""
+        (?:
+            IMPORT\s*(?:DATE|DT|ON)?
+            |IMPORTED\s*(?:ON|DATE)?
+            |DATE\s*OF\s*IMPORT
+        )
+        \s*[:.\-]?\s*
+        (
+            [0-9]{1,2}[\/\-\.][0-9]{1,2}[\/\-\.][0-9]{2,4}
+            |
+            [0-9]{1,2}[\/\-\.][0-9]{4}
+            |
+            (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)
+            [a-z]*[\s.\-/]*[0-9]{2,4}
+        )
+        """,
         raw_text,
-        re.IGNORECASE,
+        re.IGNORECASE | re.VERBOSE,
     )
+
     if imp_date_match:
         add_field(
             field_name="import_date",
             field_value=imp_date_match.group(1),
-            confidence=0.85,
+            confidence=0.93,
             source_text=imp_date_match.group(0),
         )
 
