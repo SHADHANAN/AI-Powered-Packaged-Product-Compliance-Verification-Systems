@@ -70,24 +70,53 @@ def extract_fields_from_text(raw_text: str) -> List[Dict[str, Any]]:
         )
 
     # 2. Net Quantity & Quantity Unit
+        # 2. Net Quantity & Quantity Unit
+    # Supports: 500 g, 500G, 0.5 kg, 500 ml, 1 L, 250mg, etc.
     net_qty_match = re.search(
-        r"(?:NET\s*(?:QTY|QUANTITY|WT|WEIGHT|CONTENTS?)|NET\s*VOL(?:UME)?)\s*[:\.-]?\s*([0-9]+(?:\.[0-9]+)?)\s*([a-zA-Z]+)",
+        r"""
+        (?:
+            NET\s*
+            (?:
+                QTY|QUANTITY|WT|WEIGHT|CONTENTS?|VOL(?:UME)?
+            )
+        )
+        \s*[:.\-]?\s*
+        ([0-9]+(?:\.[0-9]+)?)
+        \s*
+        (gms|kgs|gm|kg|mg|litres|litre|ltr|ml|cl|g|l)
+        
+        \b
+        """,
         raw_text,
-        re.IGNORECASE,
+        re.IGNORECASE | re.VERBOSE,
     )
+
     if net_qty_match:
         qty_num = net_qty_match.group(1)
         qty_unit = net_qty_match.group(2).lower()
+
+        # Keep the original unit in the extracted value.
+        # This preserves OCR/source information such as "gms".
+        normalized_unit = {
+                 "kgs": "kg",
+    "gm": "g",
+    "gms": "g",
+    "ltr": "l",
+    "litre": "l",
+    "litres": "l",
+}.get(qty_unit, qty_unit)
+
         add_field(
             field_name="net_quantity",
-            field_value=f"{qty_num} {qty_unit}",
-            confidence=0.90,
+            field_value=f"{qty_num} {net_qty_match.group(2)}",
+            confidence=0.95,
             source_text=net_qty_match.group(0),
         )
+
         add_field(
             field_name="quantity_unit",
-            field_value=qty_unit,
-            confidence=0.90,
+            field_value=net_qty_match.group(2).lower(),
+            confidence=0.95,
             source_text=net_qty_match.group(0),
         )
 
