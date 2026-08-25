@@ -121,16 +121,30 @@ def extract_fields_from_text(raw_text: str) -> List[Dict[str, Any]]:
         )
 
     # 3. Batch Number / Lot Number
+        # 3. Batch Number / Lot Number
+    # Supports values such as:
+    # BATCH NO: B-2024/09A
+    # BATCH NUMBER ABC123
+    # LOT NO: L-45/2026
     batch_match = re.search(
-        r"(?:BATCH\s*(?:NO|NUM|NUMBER)?|B\.?\s*NO\.?|LOT\s*(?:NO|NUM|NUMBER)?|LOT)\s*[:\.-]?\s*([A-Za-z0-9\-\/]+)",
+        r"""
+        (?:
+            BATCH\s*(?:NO|NUM|NUMBER)?
+            |B\.?\s*NO\.?
+            |LOT\s*(?:NO|NUM|NUMBER)?
+        )
+        \s*[:.\-]?\s*
+        ([A-Za-z0-9][A-Za-z0-9._/\-]*)
+        """,
         raw_text,
-        re.IGNORECASE,
+        re.IGNORECASE | re.VERBOSE,
     )
+
     if batch_match:
         add_field(
             field_name="batch_number",
             field_value=batch_match.group(1),
-            confidence=0.88,
+            confidence=0.94,
             source_text=batch_match.group(0),
         )
 
