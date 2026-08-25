@@ -405,5 +405,18 @@ def extract_fields_from_text(raw_text: str) -> List[Dict[str, Any]]:
             source_text=brand_match.group(0),
         )
 
-    logger.info(f"Extracted {len(extracted)} structured fields from OCR text")
-    return extracted
+           # Remove accidental duplicate fields while preserving extraction order.
+    unique_fields: List[Dict[str, Any]] = []
+    seen = set()
+
+    for field in extracted:
+        field_name = field.get("field_name")
+        if field_name and field_name not in seen:
+            seen.add(field_name)
+            unique_fields.append(field)
+
+    logger.info(
+        f"Extracted {len(unique_fields)} unique structured fields from OCR text"
+    )
+
+    return unique_fields
