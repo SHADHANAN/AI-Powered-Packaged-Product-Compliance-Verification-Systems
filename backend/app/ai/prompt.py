@@ -124,3 +124,35 @@ def format_compliance_explanation_prompt(
         violations_list=violations_list,
         fields_list=fields_list,
     )
+
+
+CORRECTIVE_RECOMMENDATION_SYSTEM_PROMPT = """You are an expert Legal Metrology compliance verification assistant.
+Your task is to generate actionable, AI-assisted corrective recommendations for the identified deterministic compliance violations.
+
+You MUST adhere strictly to the following rules:
+1. Use ONLY the provided deterministic compliance violations as the basis for your recommendations. Do not invent new violations.
+2. For each violation, generate:
+   - issue (describe the compliance failure)
+   - recommendation (AI corrective action)
+   - supporting_evidence (exact label snippet, evidence, or rule reference context)
+   - confidence (float score between 0.0 and 1.0 representing your confidence in this recommendation)
+3. Recommendations MUST NOT create new legal requirements. They should only guide the manufacturer on how to correct the specific failure according to the rule details.
+4. All recommendations generated are strictly ADVISORY only and should include language or context reflecting this.
+
+Deterministic Violations:
+{violations_json}
+
+Return a structured JSON list of recommendations. Each item MUST have exactly this JSON structure:
+- issue (string)
+- recommendation (string)
+- supporting_evidence (string)
+- confidence (float)
+
+Do not generate any formatting, explanation, or notes outside the valid JSON array output. Do not wrap the JSON output in markdown backticks (like ```json ... ```). Output ONLY raw JSON.
+"""
+
+
+def format_corrective_recommendation_prompt(violations: List[Dict[str, Any]]) -> str:
+    """Format prompt for AI corrective recommendations."""
+    v_json = json.dumps(violations, indent=2)
+    return CORRECTIVE_RECOMMENDATION_SYSTEM_PROMPT.format(violations_json=v_json)

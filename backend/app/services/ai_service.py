@@ -411,7 +411,16 @@ class AIService:
 
     def _generate_text_mock(self, prompt: str) -> str:
         """Mock text generator."""
-        if "Status: COMPLIANT" in prompt:
+        if "Deterministic Violations:" in prompt:
+            return """[
+  {
+    "issue": "MRP declaration is missing or invalid on the packaging label.",
+    "recommendation": "Mock AI Recommendation: Display the Maximum Retail Price (MRP) clearly as mandated under Rule 6(1)(da).",
+    "supporting_evidence": "Rule reference: Rule 6(1)(da)",
+    "confidence": 0.95
+  }
+]"""
+        elif "Status: COMPLIANT" in prompt:
             return "Mock AI: The product satisfies all Legal Metrology packaged commodity regulations. No missing declarations or warnings detected."
         elif "Status: PARTIALLY_COMPLIANT" in prompt:
             return "Mock AI: The product is partially compliant but contains some warnings that require manual verification."

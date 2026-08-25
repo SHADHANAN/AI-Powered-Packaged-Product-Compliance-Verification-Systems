@@ -15,7 +15,7 @@ from app.models.enums import AuditAction
 from app.models.user import User
 from app.models.verification import Verification
 from app.schemas.audit_log import AuditLogRead
-from app.schemas.compliance import ComplianceExplanationRead
+from app.schemas.compliance import ComplianceExplanationRead, CorrectiveRecommendationsRead
 from app.schemas.compliance_check import ComplianceSummaryRead
 from app.schemas.extracted_field import ExtractedFieldRead
 from app.schemas.report import ComplianceReportData
@@ -187,6 +187,32 @@ def get_compliance_explanation(
     
     from app.ai.explanation import generate_ai_compliance_explanation
     return generate_ai_compliance_explanation(db=db, verification_id=id)
+
+
+@router.get(
+    "/{id}/compliance/recommendations",
+    response_model=CorrectiveRecommendationsRead,
+    status_code=status.HTTP_200_OK,
+    summary="Get AI-generated Compliance Recommendations",
+    description="Retrieve AI-generated corrective packaging recommendations based strictly on deterministic compliance violations.",
+)
+def get_compliance_recommendations(
+    id: uuid.UUID,
+    current_user: User = Depends(require_authenticated_user),
+    db: Session = Depends(get_db),
+) -> CorrectiveRecommendationsRead:
+    """Generate or retrieve AI-assisted regulatory compliance corrective recommendations."""
+    verification = db.get(Verification, id)
+    if not verification:
+        raise NotFoundException(f"Verification with id '{id}' not found")
+    verify_verification_ownership(verification, current_user)
+    
+    from app.ai.recommendation import generate_ai_corrective_recommendations
+    recs = generate_ai_corrective_recommendations(db=db, verification_id=id)
+    return {
+        "verification_id": id,
+        "recommendations": recs
+    }
 
 
 @router.post(
