@@ -213,18 +213,31 @@ def extract_fields_from_text(raw_text: str) -> List[Dict[str, Any]]:
         )
 
     # 6. Country of Origin
+        # 6. Country of Origin
     country_match = re.search(
-        r"(?:COUNTRY\s*OF\s*ORIGIN|MADE\s*IN|PRODUCT\s*OF|ORIGIN)\s*[:\.-]?\s*([A-Za-z\s]+?)(?:\n|\r|\.|,|$|;|Mfg)",
+        r"""
+        (?:
+            COUNTRY\s*OF\s*ORIGIN
+            |MADE\s*IN
+            |PRODUCT\s*OF
+            |ORIGIN
+        )
+        \s*[:.\-]?\s*
+        ([A-Za-z][A-Za-z\s.&'-]*?)
+        (?=\n|\r|[.;,]|MFG|MFD|PKD|BATCH|LOT|$)
+        """,
         raw_text,
-        re.IGNORECASE,
+        re.IGNORECASE | re.VERBOSE,
     )
+
     if country_match:
-        country_val = country_match.group(1).strip()
+        country_val = clean_snippet(country_match.group(1))
+
         if len(country_val) > 2:
             add_field(
                 field_name="country_of_origin",
                 field_value=country_val,
-                confidence=0.85,
+                confidence=0.92,
                 source_text=country_match.group(0),
             )
 
