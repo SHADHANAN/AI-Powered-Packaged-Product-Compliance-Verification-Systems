@@ -1,38 +1,31 @@
 """Compliance Rule Engine for Packaged Commodity Compliance Verification.
 
 Dynamic validation engine that loads Legal Metrology rules configuration and
-validates structured product information without hardcoding field-specific checks.
+validates structured product information using an intelligent four-state validation model
+(PASS, WARNING, FAIL, NOT_APPLICABLE).
 """
 from __future__ import annotations
 
-from enum import Enum
 import json
 import logging
 from pathlib import Path
 import re
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
+from compliance.status import (
+    DEFAULT_CONFIDENCE_THRESHOLD,
+    ComplianceStatus,
+    OverallComplianceStatus,
+    OverallStatus,
+    RuleEvaluationResult,
+    StatusEvaluator,
+    ValidationStatus,
+)
+
 logger = logging.getLogger(__name__)
 
 # Default path to Legal Metrology rules configuration
 DEFAULT_RULES_PATH = Path(__file__).parent / "rules" / "legal_metrology_rules.json"
-
-
-class ValidationStatus(str, Enum):
-    """Status outcomes for individual compliance rule checks."""
-
-    PASS = "PASS"
-    WARNING = "WARNING"
-    FAIL = "FAIL"
-    NOT_APPLICABLE = "NOT_APPLICABLE"
-
-
-class OverallStatus(str, Enum):
-    """Overall compliance outcome for a packaged commodity report."""
-
-    COMPLIANT = "COMPLIANT"
-    NON_COMPLIANT = "NON_COMPLIANT"
-    PARTIALLY_COMPLIANT = "PARTIALLY_COMPLIANT"
 
 
 # Common aliases mapping extracted OCR keys to canonical rule fields
@@ -215,7 +208,7 @@ def validate_quantity(
         else:
             return (
                 ValidationStatus.WARNING,
-                f"Net quantity unit '{clean_unit}' in '{val_str}' may not be a standard Legal Metrology SI unit.",
+                f"Net quantity unit '{clean_unit}' in '{val_str}' may not be a standard Legal Metrology SI unit. Manual verification recommended.",
                 rule.get("recommendation") or "Use standard metric units such as g, kg, ml, L, or N.",
             )
 
@@ -298,7 +291,7 @@ def validate_date(
 
     return (
         ValidationStatus.WARNING,
-        f"{rule_name} '{val_str}' is present but could not be parsed into a standard MM/YYYY or Month YYYY format.",
+        f"{rule_name} '{val_str}' is present but could not be parsed into a standard MM/YYYY or Month YYYY format. Manual verification recommended.",
         rule.get("recommendation") or "Format date as MM/YYYY (e.g., '08/2026') or Month YYYY (e.g., 'Aug 2026').",
     )
 
@@ -321,7 +314,7 @@ def validate_address(
     if len(val_str) < 6:
         return (
             ValidationStatus.WARNING,
-            f"Declared address '{val_str}' is too brief and may not provide sufficient location details for postal communication.",
+            f"Declared address '{val_str}' is too brief and may not provide sufficient location details for postal communication. Manual verification recommended.",
             rule.get("recommendation") or "Provide full address including premises, city, state, and PIN code.",
         )
 
@@ -374,7 +367,8 @@ class ComplianceEngine:
     """Configurable Legal Metrology rule validation engine.
 
     Loads validation rules dynamically and validates structured product data
-    extracted from OCR or manual inputs without hardcoded field conditionals.
+    extracted from OCR or manual inputs using an intelligent four-state validation
+    model (PASS, WARNING, FAIL, NOT_APPLICABLE).
     """
 
     def __init__(
@@ -382,6 +376,7 @@ class ComplianceEngine:
         rules_path: Optional[Union[str, Path]] = None,
         rules_data: Optional[List[Dict[str, Any]]] = None,
         field_aliases: Optional[Dict[str, List[str]]] = None,
+        confidence_threshold: float = DEFAULT_CONFIDENCE_THRESHOLD,
     ) -> None:
         """Initialize the Compliance Engine.
 
@@ -389,9 +384,13 @@ class ComplianceEngine:
             rules_path: Optional path to JSON rules file. Defaults to legal_metrology_rules.json.
             rules_data: Optional list of rule dictionaries (overrides file loading).
             field_aliases: Optional custom field aliases mapping.
+            confidence_threshold: Default OCR confidence threshold (0.0 to 1.0).
         """
         self.rules_path = Path(rules_path) if rules_path else DEFAULT_RULES_PATH
         self.field_aliases = field_aliases or DEFAULT_FIELD_ALIASES
+        self.confidence_threshold = confidence_threshold
+        self.status_evaluator = StatusEvaluator(default_confidence_threshold=confidence_threshold)
+
         self._validators: Dict[str, ValidatorFunc] = {
             "required": validate_required,
             "quantity": validate_quantity,
@@ -406,7 +405,7 @@ class ComplianceEngine:
         else:
             self.rules = self._load_rules()
 
-        logger.info("ComplianceEngine initialized with %d rules.", len(self.rules))
+        logger.info("ComplianceEngine initialized with %d rules (Confidence threshold: %.2f).", len(self.rules), self.confidence_threshold)
 
     def _load_rules(self) -> List[Dict[str, Any]]:
         """Load and parse rules JSON file."""
@@ -431,35 +430,72 @@ class ComplianceEngine:
         self._validators[validation_type.lower()] = validator_func
         logger.info("Registered custom validator for type '%s'", validation_type)
 
-    def extract_field_value(self, field_name: str, product_data: Dict[str, Any]) -> Any:
-        """Dynamically retrieve field value from product_data using canonical name and aliases.
+    def extract_field_and_confidence(
+        self,
+        field_name: str,
+        product_data: Dict[str, Any],
+        context: Optional[Dict[str, Any]] = None,
+    ) -> Tuple[Any, Optional[float]]:
+        """Dynamically retrieve field value and OCR confidence from product_data or context.
 
-        Args:
-            field_name: The canonical field name defined in the rule.
-            product_data: Extracted product key-value pairs.
+        Supports:
+        - Plain key-value mapping: `{"product_name": "ABC Tea"}`
+        - Object with value & confidence: `{"mrp": {"value": "₹120", "confidence": 0.65}}`
+        - Context confidences dictionary: `context={"confidences": {"mrp": 0.65}}`
 
         Returns:
-            The extracted field value if present, else None.
+            Tuple of (extracted_value, confidence_score)
         """
+        ctx = context or {}
+        confidences_map = ctx.get("confidences") or ctx.get("field_confidences") or {}
+
+        def _unpack_val_conf(raw_val: Any, key_name: str) -> Tuple[Any, Optional[float]]:
+            if isinstance(raw_val, dict):
+                val = raw_val.get("value") or raw_val.get("field_value") or raw_val.get("text")
+                conf = raw_val.get("confidence") or raw_val.get("score")
+                if conf is not None:
+                    try:
+                        conf = float(conf)
+                    except (ValueError, TypeError):
+                        conf = None
+                return val, conf
+            
+            # Check if raw_val has attribute confidence/field_value
+            if hasattr(raw_val, "field_value") or hasattr(raw_val, "confidence"):
+                val = getattr(raw_val, "field_value", None)
+                conf = getattr(raw_val, "confidence", None)
+                return val, conf
+
+            # Check context confidence map
+            conf = confidences_map.get(key_name)
+            if conf is not None:
+                try:
+                    conf = float(conf)
+                except (ValueError, TypeError):
+                    conf = None
+            return raw_val, conf
+
         # 1. Direct match
         if field_name in product_data:
-            return product_data[field_name]
+            return _unpack_val_conf(product_data[field_name], field_name)
 
         # 2. Case-insensitive direct match
-        lower_data = {str(k).strip().lower(): v for k, v in product_data.items()}
+        lower_data = {str(k).strip().lower(): (k, v) for k, v in product_data.items()}
         if field_name.lower() in lower_data:
-            return lower_data[field_name.lower()]
+            orig_k, val = lower_data[field_name.lower()]
+            return _unpack_val_conf(val, orig_k)
 
         # 3. Alias matches
         aliases = self.field_aliases.get(field_name, [])
         for alias in aliases:
             if alias in product_data:
-                return product_data[alias]
+                return _unpack_val_conf(product_data[alias], alias)
             alias_lower = alias.lower()
             if alias_lower in lower_data:
-                return lower_data[alias_lower]
+                orig_k, val = lower_data[alias_lower]
+                return _unpack_val_conf(val, orig_k)
 
-        return None
+        return None, None
 
     def is_imported_product(self, product_data: Dict[str, Any], context: Optional[Dict[str, Any]] = None) -> bool:
         """Determine whether the product is imported based on origin or flags."""
@@ -482,7 +518,7 @@ class ComplianceEngine:
             return False
 
         # 3. Check country of origin value
-        coo_val = self.extract_field_value("country_of_origin", product_data)
+        coo_val, _ = self.extract_field_and_confidence("country_of_origin", product_data, context)
         if coo_val is not None and str(coo_val).strip():
             origin_clean = str(coo_val).strip().lower()
             if origin_clean not in DOMESTIC_ORIGIN_KEYWORDS:
@@ -529,7 +565,7 @@ class ComplianceEngine:
         Args:
             rule: Rule definition dictionary.
             product_data: Extracted OCR fields dictionary.
-            context: Optional contextual parameters.
+            context: Optional contextual parameters (e.g. confidence_threshold).
 
         Returns:
             Dictionary with rule_id, rule_name, status, message, recommendation.
@@ -542,28 +578,43 @@ class ComplianceEngine:
         # Check applicability
         if not self.is_rule_applicable(rule, product_data, context):
             applicable_to = rule.get("applicable_to", "")
-            return {
-                "rule_id": rule_id,
-                "rule_name": rule_name,
-                "status": ValidationStatus.NOT_APPLICABLE.value,
-                "message": f"Rule is not applicable (applies only to '{applicable_to}' commodities).",
-                "recommendation": None,
-            }
+            return RuleEvaluationResult(
+                rule_id=rule_id,
+                rule_name=rule_name,
+                status=ValidationStatus.NOT_APPLICABLE,
+                message=f"Rule is not applicable (applies only to '{applicable_to}' commodities).",
+                recommendation=None,
+                field=field,
+            ).to_dict()
 
-        # Dynamically retrieve value
-        value = self.extract_field_value(field, product_data)
+        # Dynamically retrieve value & confidence
+        value, confidence = self.extract_field_and_confidence(field, product_data, context)
 
         # Dispatch validator by type
         validator = self._validators.get(validation_type, self._validators["required"])
-        status, msg, rec = validator(value, rule, context or {})
+        base_status, base_msg, base_rec = validator(value, rule, context or {})
 
-        return {
-            "rule_id": rule_id,
-            "rule_name": rule_name,
-            "status": status.value if isinstance(status, ValidationStatus) else str(status),
-            "message": msg,
-            "recommendation": rec,
-        }
+        # Intelligent status evaluation factoring confidence and readability
+        final_status, final_msg, final_rec = self.status_evaluator.evaluate_status(
+            base_status=base_status,
+            base_message=base_msg,
+            base_recommendation=base_rec,
+            field_value=value,
+            confidence=confidence,
+            rule=rule,
+            context=context,
+        )
+
+        return RuleEvaluationResult(
+            rule_id=rule_id,
+            rule_name=rule_name,
+            status=final_status,
+            message=final_msg,
+            recommendation=final_rec,
+            confidence=confidence,
+            field=field,
+            actual_value=value,
+        ).to_dict()
 
     def validate(
         self,
@@ -574,7 +625,7 @@ class ComplianceEngine:
 
         Args:
             product_data: Extracted product fields dictionary.
-            context: Optional contextual dictionary (e.g. is_imported, category).
+            context: Optional contextual dictionary (e.g. is_imported, confidence_threshold).
 
         Returns:
             Complete validation report with overall_status, results, passed, failed,
@@ -602,16 +653,15 @@ class ComplianceEngine:
             elif status == ValidationStatus.NOT_APPLICABLE.value:
                 not_applicable += 1
 
-        # Determine overall status
-        if failed > 0:
-            overall_status = OverallStatus.NON_COMPLIANT.value
-        elif warnings > 0:
-            overall_status = OverallStatus.PARTIALLY_COMPLIANT.value
-        else:
-            overall_status = OverallStatus.COMPLIANT.value
+        overall_status_enum = StatusEvaluator.calculate_overall_status(
+            passed=passed,
+            failed=failed,
+            warnings=warnings,
+            not_applicable=not_applicable,
+        )
 
         report = {
-            "overall_status": overall_status,
+            "overall_status": overall_status_enum.value,
             "results": results,
             "passed": passed,
             "failed": failed,
@@ -621,7 +671,7 @@ class ComplianceEngine:
 
         logger.info(
             "Validation complete: %s (Passed: %d, Failed: %d, Warnings: %d, N/A: %d)",
-            overall_status,
+            overall_status_enum.value,
             passed,
             failed,
             warnings,
@@ -637,11 +687,11 @@ class ComplianceEngine:
 _default_engine: Optional[ComplianceEngine] = None
 
 
-def get_compliance_engine() -> ComplianceEngine:
+def get_compliance_engine(confidence_threshold: float = DEFAULT_CONFIDENCE_THRESHOLD) -> ComplianceEngine:
     """Return a singleton instance of ComplianceEngine."""
     global _default_engine
-    if _default_engine is None:
-        _default_engine = ComplianceEngine()
+    if _default_engine is None or _default_engine.confidence_threshold != confidence_threshold:
+        _default_engine = ComplianceEngine(confidence_threshold=confidence_threshold)
     return _default_engine
 
 
