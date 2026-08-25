@@ -21,12 +21,13 @@ export const API_ENDPOINTS = {
     REGISTER: '/auth/register',
     ME:       '/auth/me',
   },
-  PRODUCTS:      '/products',
-  COMPLIANCE:    '/compliance',
-  EXTRACTION:    '/extraction',
-  OCR:           '/ocr',
-  REPORTS:       '/reports',
-  VERIFICATIONS: '/verifications',
+  PRODUCTS:         '/products',
+  PRODUCTS_UPLOAD:  '/products/upload',
+  COMPLIANCE:       '/compliance',
+  EXTRACTION:       '/extraction',
+  OCR:              '/ocr',
+  REPORTS:          '/reports',
+  VERIFICATIONS:    '/verifications',
 };
 
 /**
@@ -36,4 +37,15 @@ export const ROLES = {
   ADMIN:     'ADMIN',
   INSPECTOR: 'INSPECTOR',
   VIEWER:    'VIEWER',
+};
+
+/**
+ * Upload validation configuration
+ */
+export const UPLOAD_CONFIG = {
+  MAX_FILE_SIZE_BYTES: 10 * 1024 * 1024, // 10 MB
+  MAX_FILE_SIZE_MB: 10,
+  ALLOWED_MIME_TYPES: ['image/jpeg', 'image/png', 'image/webp'],
+  ALLOWED_EXTENSIONS: ['.jpg', '.jpeg', '.png', '.webp'],
+  ACCEPTED_FORMATS_STRING: 'JPG, JPEG, PNG, WEBP',
 };
