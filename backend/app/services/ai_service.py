@@ -6,7 +6,7 @@ from typing import Any, Dict, List
 import httpx
 
 from app.config import get_settings
-from app.ai.prompt import format_compliance_prompt
+from app.ai.prompt import format_compliance_prompt, format_ocr_interpretation_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -185,3 +185,200 @@ class AIService:
             raise AIServiceException("JSON object returned, but could not find rule evaluations list inside it.")
         else:
             raise AIServiceException("AI response did not parse into a valid JSON array or object.")
+
+    def interpret_ocr(self, raw_text: str, deterministic_fields: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Interpret raw OCR text fields with AI assistance.
+        
+        Args:
+            raw_text: The complete raw OCR text.
+            deterministic_fields: Extracted fields from deterministic extraction.
+            
+        Returns:
+            A list of interpreted field dictionaries.
+            
+        Raises:
+            AIServiceException: If the AI provider fails.
+        """
+        provider = self.settings.AI_PROVIDER.lower().strip()
+        
+        if provider == "mock":
+            logger.info("Executing OCR interpretation using MOCK AI provider.")
+            return self._interpret_ocr_mock(raw_text, deterministic_fields)
+        elif provider == "gemini":
+            logger.info("Executing OCR interpretation using GEMINI AI provider.")
+            return self._interpret_ocr_gemini(raw_text, deterministic_fields)
+        elif provider == "openai":
+            logger.info("Executing OCR interpretation using OPENAI AI provider.")
+            return self._interpret_ocr_openai(raw_text, deterministic_fields)
+        else:
+            raise AIServiceException(f"Unsupported AI provider: {provider}")
+
+    def _interpret_ocr_mock(self, raw_text: str, deterministic_fields: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Mock AI provider for OCR interpretation."""
+        results = []
+        raw_lower = raw_text.lower()
+        
+        det_map = {f["field_name"]: f for f in deterministic_fields}
+        
+        all_possible_fields = [
+            "mrp", "net_quantity", "quantity_unit", "batch_number",
+            "manufacturing_date", "import_date", "country_of_origin",
+            "manufacturer", "manufacturer_address", "importer", "importer_address",
+            "customer_care_details", "product_name", "brand_name"
+        ]
+        
+        if not raw_text.strip():
+            for f_name in all_possible_fields:
+                results.append({
+                    "field": f_name,
+                    "original_ocr_value": None,
+                    "interpreted_value": None,
+                    "confidence": 0.0,
+                    "evidence": None,
+                    "short_reason": "No OCR text provided.",
+                    "status": "UNRESOLVED"
+                })
+            return results
+
+        is_low_conf = "smudge" in raw_lower or "unreadable" in raw_lower or "poor" in raw_lower
+        has_ambiguous_mrp = "1o0" in raw_lower or "l00" in raw_lower
+        
+        for f_name in all_possible_fields:
+            det = det_map.get(f_name)
+            original_val = det["field_value"] if det else None
+            evidence = det["source_text"] if det else None
+            
+            if is_low_conf:
+                results.append({
+                    "field": f_name,
+                    "original_ocr_value": original_val,
+                    "interpreted_value": original_val,
+                    "confidence": 0.3,
+                    "evidence": evidence,
+                    "short_reason": "OCR text is smudged/unreadable.",
+                    "status": "NEEDS_REVIEW"
+                })
+            elif f_name == "mrp" and has_ambiguous_mrp:
+                results.append({
+                    "field": "mrp",
+                    "original_ocr_value": "1O0",
+                    "interpreted_value": "100.00",
+                    "confidence": 0.95,
+                    "evidence": "MRP: Rs. 1O0",
+                    "short_reason": "Corrected letter 'O' to number '0' in price.",
+                    "status": "COMPLETED"
+                })
+            elif f_name == "mrp" and original_val:
+                results.append({
+                    "field": "mrp",
+                    "original_ocr_value": original_val,
+                    "interpreted_value": f"{float(original_val.replace('Rs', '').replace('/-', '').strip()):.2f}" if original_val.replace('Rs', '').replace('/-', '').strip().replace('.', '', 1).isdigit() else original_val,
+                    "confidence": 0.98,
+                    "evidence": evidence,
+                    "short_reason": "Normalized MRP format",
+                    "status": "COMPLETED"
+                })
+            elif det:
+                results.append({
+                    "field": f_name,
+                    "original_ocr_value": original_val,
+                    "interpreted_value": original_val,
+                    "confidence": det.get("confidence", 0.9),
+                    "evidence": evidence,
+                    "short_reason": "Extracted with high confidence via pattern matching.",
+                    "status": "COMPLETED"
+                })
+            else:
+                results.append({
+                    "field": f_name,
+                    "original_ocr_value": None,
+                    "interpreted_value": None,
+                    "confidence": 0.0,
+                    "evidence": None,
+                    "short_reason": "Field not present in OCR text.",
+                    "status": "UNRESOLVED"
+                })
+                
+        return results
+
+    def _interpret_ocr_gemini(self, raw_text: str, deterministic_fields: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Call Gemini API for OCR interpretation."""
+        api_key = self.settings.AI_API_KEY
+        if not api_key:
+            raise AIServiceException("Gemini API key is not configured in environment variables.")
+        
+        prompt_text = format_ocr_interpretation_prompt(raw_text, deterministic_fields)
+        
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.settings.AI_MODEL}:generateContent?key={api_key}"
+        headers = {"Content-Type": "application/json"}
+        payload = {
+            "contents": [{
+                "parts": [{
+                    "text": prompt_text
+                }]
+            }],
+            "generationConfig": {
+                "responseMimeType": "application/json",
+                "temperature": self.settings.AI_TEMPERATURE
+            }
+        }
+        
+        try:
+            with httpx.Client(timeout=self.settings.AI_TIMEOUT_SECONDS) as client:
+                response = client.post(url, json=payload, headers=headers)
+                response.raise_for_status()
+                res_data = response.json()
+                
+                candidates = res_data.get("candidates", [])
+                if not candidates:
+                    raise AIServiceException("No response candidates returned from Gemini API.")
+                
+                content_parts = candidates[0].get("content", {}).get("parts", [])
+                if not content_parts:
+                    raise AIServiceException("Empty content parts in Gemini API response.")
+                
+                text_content = content_parts[0].get("text", "")
+                return self._parse_json_response(text_content)
+        except httpx.HTTPError as e:
+            raise AIServiceException(f"Gemini API HTTP request failed: {e}")
+        except Exception as e:
+            raise AIServiceException(f"Failed to process Gemini API response: {e}")
+
+    def _interpret_ocr_openai(self, raw_text: str, deterministic_fields: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Call OpenAI API for OCR interpretation."""
+        api_key = self.settings.AI_API_KEY
+        if not api_key:
+            raise AIServiceException("OpenAI API key is not configured in environment variables.")
+        
+        prompt_text = format_ocr_interpretation_prompt(raw_text, deterministic_fields)
+        
+        url = "https://api.openai.com/v1/chat/completions"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}"
+        }
+        payload = {
+            "model": self.settings.AI_MODEL,
+            "messages": [
+                {"role": "user", "content": prompt_text}
+            ],
+            "response_format": {"type": "json_object"},
+            "temperature": self.settings.AI_TEMPERATURE
+        }
+        
+        try:
+            with httpx.Client(timeout=self.settings.AI_TIMEOUT_SECONDS) as client:
+                response = client.post(url, json=payload, headers=headers)
+                response.raise_for_status()
+                res_data = response.json()
+                
+                choices = res_data.get("choices", [])
+                if not choices:
+                    raise AIServiceException("No choices returned from OpenAI API.")
+                
+                text_content = choices[0].get("message", {}).get("content", "")
+                return self._parse_json_response(text_content)
+        except httpx.HTTPError as e:
+            raise AIServiceException(f"OpenAI API HTTP request failed: {e}")
+        except Exception as e:
+            raise AIServiceException(f"Failed to process OpenAI API response: {e}")

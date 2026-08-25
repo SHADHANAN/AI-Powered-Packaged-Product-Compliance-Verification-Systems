@@ -1,6 +1,7 @@
 import re
 from typing import Any, Dict, List
 
+from app.config import get_settings
 from app.services.extraction_service.normalizer import normalize_ocr_text
 from app.utils.logging import get_logger
 
@@ -440,3 +441,65 @@ def fields_to_dict(fields: List[Dict[str, Any]]) -> Dict[str, Any]:
         for field in fields
         if field.get("field_name")
     }
+
+
+def interpret_ocr_fields(raw_text: str) -> List[Dict[str, Any]]:
+    """Interpret OCR fields using optional AI assistance and deterministic fallback."""
+    deterministic_fields = extract_fields_from_text(raw_text)
+    
+    settings = get_settings()
+    if settings.AI_ENABLED:
+        try:
+            from app.services.ai_service import AIService
+            ai_service = AIService()
+            return ai_service.interpret_ocr(raw_text, deterministic_fields)
+        except Exception as e:
+            logger.warning(
+                f"AI-assisted OCR interpretation failed, falling back to deterministic: {e}",
+                exc_info=True
+            )
+            
+    return get_deterministic_interpretations(deterministic_fields)
+
+
+def get_deterministic_interpretations(deterministic_fields: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Map deterministic extractions to the structured interpretation schema."""
+    all_possible_fields = [
+        "mrp", "net_quantity", "quantity_unit", "batch_number",
+        "manufacturing_date", "import_date", "country_of_origin",
+        "manufacturer", "manufacturer_address", "importer", "importer_address",
+        "customer_care_details", "product_name", "brand_name"
+    ]
+    det_map = {f["field_name"]: f for f in deterministic_fields}
+    results = []
+    
+    for f_name in all_possible_fields:
+        det = det_map.get(f_name)
+        if det:
+            val = det["field_value"]
+            conf = det.get("confidence", 0.9)
+            
+            # Simple heuristic: if confidence is very low, mark needs review
+            status = "COMPLETED" if conf >= 0.7 else "NEEDS_REVIEW"
+            
+            results.append({
+                "field": f_name,
+                "original_ocr_value": val,
+                "interpreted_value": val,
+                "confidence": conf,
+                "evidence": det.get("source_text"),
+                "short_reason": "Regex pattern matched successfully.",
+                "status": status
+            })
+        else:
+            results.append({
+                "field": f_name,
+                "original_ocr_value": None,
+                "interpreted_value": None,
+                "confidence": 0.0,
+                "evidence": None,
+                "short_reason": "Field not detected by regex.",
+                "status": "UNRESOLVED"
+            })
+            
+    return results
