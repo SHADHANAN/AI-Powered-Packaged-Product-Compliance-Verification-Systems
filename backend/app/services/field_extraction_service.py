@@ -429,3 +429,14 @@ def extract_fields_from_text(raw_text: str) -> List[Dict[str, Any]]:
     )
 
     return unique_fields
+def fields_to_dict(fields: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Convert extracted field records into a field-name keyed dictionary."""
+    return {
+        field["field_name"]: {
+            "value": field["field_value"],
+            "confidence": field["confidence"],
+            "source_text": field["source_text"],
+        }
+        for field in fields
+        if field.get("field_name")
+    }
