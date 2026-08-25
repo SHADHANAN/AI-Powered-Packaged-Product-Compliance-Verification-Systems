@@ -126,3 +126,22 @@ def test_extraction_service_wrapper():
     assert "net_quantity" in field_names
     assert "quantity_unit" in field_names
     assert "brand_name" in field_names
+def test_fields_to_dict():
+    """Test conversion of extracted fields into a keyed dictionary."""
+    from app.services.field_extraction_service import (
+        extract_fields_from_text,
+        fields_to_dict,
+    )
+
+    fields = extract_fields_from_text(
+        "MRP: Rs. 120 NET QTY: 500 g BRAND: ABC"
+    )
+
+    result = fields_to_dict(fields)
+
+    assert result["mrp"]["value"] == "120"
+    assert result["net_quantity"]["value"] == "500 g"
+    assert result["quantity_unit"]["value"] == "g"
+    assert result["brand_name"]["value"] == "ABC"
+
+    assert 0 <= result["mrp"]["confidence"] <= 1
