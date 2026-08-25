@@ -1,11 +1,12 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
 import { Badge } from './ui';
 
 const navItems = [
   {
     label: 'Dashboard',
-    path: '/',
+    path: '/dashboard',
+    alternatePaths: ['/', '/dashboard'],
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" />
@@ -61,6 +62,7 @@ const ROLE_VARIANTS = {
  */
 const Sidebar = ({ isOpen, onClose }) => {
   const { user, logout, isAuthenticated } = useAuth();
+  const location = useLocation();
 
   const initials = user?.name
     ? user.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
@@ -72,6 +74,13 @@ const Sidebar = ({ isOpen, onClose }) => {
   const handleLogout = () => {
     onClose?.();
     logout();
+  };
+
+  const isNavActive = (item) => {
+    if (item.alternatePaths) {
+      return item.alternatePaths.includes(location.pathname);
+    }
+    return location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
   };
 
   return (
@@ -102,33 +111,29 @@ const Sidebar = ({ isOpen, onClose }) => {
             </p>
           </div>
 
-          {navItems.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              end={item.path === '/'}
-              onClick={onClose}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group
-                ${isActive
-                  ? 'bg-primary-50 text-primary-700 shadow-sm'
-                  : 'text-surface-600 hover:bg-surface-50 hover:text-surface-900'
-                }`
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <span className={`transition-colors ${isActive ? 'text-primary-600' : 'text-surface-400 group-hover:text-surface-600'}`}>
-                    {item.icon}
-                  </span>
-                  {item.label}
-                  {isActive && (
-                    <span className="ml-auto w-1.5 h-1.5 rounded-full bg-primary-500" />
-                  )}
-                </>
-              )}
-            </NavLink>
-          ))}
+          {navItems.map((item) => {
+            const active = isNavActive(item);
+            return (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                onClick={onClose}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group
+                  ${active
+                    ? 'bg-primary-50 text-primary-700 shadow-sm'
+                    : 'text-surface-600 hover:bg-surface-50 hover:text-surface-900'
+                  }`}
+              >
+                <span className={`transition-colors ${active ? 'text-primary-600' : 'text-surface-400 group-hover:text-surface-600'}`}>
+                  {item.icon}
+                </span>
+                {item.label}
+                {active && (
+                  <span className="ml-auto w-1.5 h-1.5 rounded-full bg-primary-500" />
+                )}
+              </NavLink>
+            );
+          })}
 
           {/* Bottom: user info + logout */}
           <div className="mt-auto pt-4 border-t border-surface-100 space-y-2">

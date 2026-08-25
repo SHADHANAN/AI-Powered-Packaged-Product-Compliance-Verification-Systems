@@ -17,8 +17,8 @@ import NotFound     from '../pages/NotFound';
  *
  * Route protection layers:
  *
- *  PublicRoute   → /login          (redirects to / if already authenticated)
- *  ProtectedRoute → / + sub-routes (redirects to /login if not authenticated)
+ *  PublicRoute    → /login                      (redirects to /dashboard if already authenticated)
+ *  ProtectedRoute → / , /dashboard + sub-routes (redirects to /login if not authenticated)
  *
  * ProtectedRoute also handles the initial loading state so protected pages
  * never flash before the session is verified.
@@ -32,6 +32,7 @@ const router = createBrowserRouter([
         element: <MainLayout />,
         children: [
           { path: '/',            element: <Dashboard /> },
+          { path: '/dashboard',   element: <Dashboard /> },
           { path: '/upload',      element: <Upload /> },
           { path: '/verification',element: <Verification /> },
           { path: '/reports',     element: <Reports /> },

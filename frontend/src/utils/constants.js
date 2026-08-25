@@ -8,7 +8,7 @@ export const APP_NAME = 'ComplianceAI';
 export const ROUTES = {
   HOME:         '/',
   LOGIN:        '/login',
-  DASHBOARD:    '/',
+  DASHBOARD:    '/dashboard',
   UPLOAD:       '/upload',
   VERIFICATION: '/verification',
   REPORTS:      '/reports',
