@@ -54,6 +54,16 @@ def generate_ai_compliance_explanation(db: Session, verification_id: uuid.UUID) 
     settings = get_settings()
     if settings.AI_ENABLED:
         try:
+            from app.ai.security import validate_untrusted_text, record_security_event, PromptInjectionException
+            for f in fields:
+                if f.field_value:
+                    validate_untrusted_text(str(f.field_value), context=f"Field '{f.field_name}' in explanation")
+            for c in checks:
+                if c.message:
+                    validate_untrusted_text(c.message, context=f"Violation message '{c.rule_code}' in explanation")
+                if c.actual_value:
+                    validate_untrusted_text(c.actual_value, context=f"Violation actual value '{c.rule_code}' in explanation")
+
             # Build prompt inputs
             violations_text = ""
             for c in checks:
@@ -94,6 +104,8 @@ def generate_ai_compliance_explanation(db: Session, verification_id: uuid.UUID) 
                 explanation_text = ai_explanation.strip()
         except Exception as e:
             logger.warning(f"AI compliance explanation generation failed, falling back: {e}", exc_info=True)
+            if isinstance(e, PromptInjectionException):
+                record_security_event(db, verification_id, details="Prompt injection attempt blocked during explanation generation.")
             explanation_text = fallback_explanation
     else:
         explanation_text = fallback_explanation

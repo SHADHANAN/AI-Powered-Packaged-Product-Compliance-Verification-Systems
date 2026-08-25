@@ -31,6 +31,13 @@ def generate_ai_corrective_recommendations(db: Session, verification_id: uuid.UU
     settings = get_settings()
     if settings.AI_ENABLED:
         try:
+            from app.ai.security import validate_untrusted_text, record_security_event, PromptInjectionException
+            for c in checks:
+                if c.message:
+                    validate_untrusted_text(c.message, context=f"Violation message '{c.rule_code}' in recommendations")
+                if c.actual_value:
+                    validate_untrusted_text(c.actual_value, context=f"Violation actual value '{c.rule_code}' in recommendations")
+
             # Build list of violation inputs for prompt
             violations_data = []
             for c in checks:
@@ -72,6 +79,8 @@ def generate_ai_corrective_recommendations(db: Session, verification_id: uuid.UU
             return processed_recs
         except Exception as e:
             logger.warning(f"AI corrective recommendation generation failed, falling back: {e}", exc_info=True)
+            if isinstance(e, PromptInjectionException):
+                record_security_event(db, verification_id, details="Prompt injection attempt blocked during recommendation generation.")
             return fallback_recs
     else:
         return fallback_recs

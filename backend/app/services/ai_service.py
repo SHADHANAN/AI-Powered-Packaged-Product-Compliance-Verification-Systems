@@ -39,6 +39,14 @@ class AIService:
         Raises:
             AIServiceException: If the API call fails or parsing fails.
         """
+        from app.ai.security import validate_untrusted_text, PromptInjectionException
+        try:
+            for key, val in fields.items():
+                if val:
+                    validate_untrusted_text(str(val), context=f"Compliance field '{key}'")
+        except PromptInjectionException as e:
+            raise AIServiceException(str(e))
+
         provider = self.settings.AI_PROVIDER.lower().strip()
         
         if provider == "mock":
@@ -199,6 +207,16 @@ class AIService:
         Raises:
             AIServiceException: If the AI provider fails.
         """
+        from app.ai.security import validate_untrusted_text, PromptInjectionException
+        try:
+            validate_untrusted_text(raw_text, context="OCR raw text")
+            for f in deterministic_fields:
+                val = f.get("field_value")
+                if val:
+                    validate_untrusted_text(str(val), context=f"Deterministic field '{f.get('field')}'")
+        except PromptInjectionException as e:
+            raise AIServiceException(str(e))
+
         provider = self.settings.AI_PROVIDER.lower().strip()
         
         if provider == "mock":

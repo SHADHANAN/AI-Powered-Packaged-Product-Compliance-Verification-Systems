@@ -75,6 +75,11 @@ def evaluate_verification_compliance(
     settings = get_settings()
     if settings.AI_ENABLED:
         try:
+            from app.ai.security import validate_untrusted_text, PromptInjectionException, record_security_event
+            for key, val in field_map.items():
+                if val:
+                    validate_untrusted_text(str(val), context=f"Compliance field '{key}'")
+
             from app.services.ai_service import AIService
             ai_evaluations = AIService().evaluate_compliance(field_map, ALL_RULES)
             
@@ -114,6 +119,9 @@ def evaluate_verification_compliance(
                 f"AI compliance evaluation failed for verification '{verification_id}', falling back to deterministic engine: {e}",
                 exc_info=True
             )
+            # Record security event
+            if "Security validation failed" in str(e) or "prompt injection" in str(e).lower() or isinstance(e, PromptInjectionException):
+                record_security_event(db, verification_id, details="Prompt injection attempt blocked during compliance evaluation.")
             evaluation_results = []
 
     if not ai_success:

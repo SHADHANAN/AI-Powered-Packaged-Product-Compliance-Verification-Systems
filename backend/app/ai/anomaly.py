@@ -30,6 +30,13 @@ def generate_ai_anomaly_detection(db: Session, verification_id: uuid.UUID) -> Li
     settings = get_settings()
     if settings.AI_ENABLED:
         try:
+            from app.ai.security import validate_untrusted_text, record_security_event, PromptInjectionException
+            if verification.ocr_raw_text:
+                validate_untrusted_text(verification.ocr_raw_text, context="OCR raw text in anomalies")
+            for f in fields:
+                if f.field_value:
+                    validate_untrusted_text(str(f.field_value), context=f"Field '{f.field_name}' in anomalies")
+
             # Format extracted fields for prompt
             fields_data = []
             for f in fields:
@@ -80,6 +87,8 @@ def generate_ai_anomaly_detection(db: Session, verification_id: uuid.UUID) -> Li
             return processed_anomalies
         except Exception as e:
             logger.warning(f"AI label anomaly detection failed, falling back: {e}", exc_info=True)
+            if isinstance(e, PromptInjectionException):
+                record_security_event(db, verification_id, details="Prompt injection attempt blocked during anomaly detection.")
             return fallback_anomalies
     else:
         return fallback_anomalies
