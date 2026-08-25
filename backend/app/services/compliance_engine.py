@@ -10,6 +10,7 @@ from app.models.verification import Verification
 from app.schemas.compliance_check import ComplianceCheckRead, ComplianceSummaryRead
 from app.services import audit_service
 from app.services.compliance_rules import ALL_RULES, RuleEvaluationResult
+from app.config import get_settings
 from app.utils.exceptions import NotFoundException
 from app.utils.logging import get_logger
 
@@ -67,10 +68,61 @@ def evaluate_verification_compliance(
     # Build field mapping dictionary
     field_map: Dict[str, str] = {f.field_name: f.field_value for f in extracted_fields}
 
-    # Evaluate all registered Legal Metrology rules
-    evaluation_results: List[RuleEvaluationResult] = [
-        rule.evaluate(field_map) for rule in ALL_RULES
-    ]
+    # Evaluate compliance rules
+    evaluation_results: List[RuleEvaluationResult] = []
+    ai_success = False
+
+    settings = get_settings()
+    if settings.AI_ENABLED:
+        try:
+            from app.services.ai_service import AIService
+            ai_evaluations = AIService().evaluate_compliance(field_map, ALL_RULES)
+            
+            for item in ai_evaluations:
+                # Convert string status and severity to enums
+                status_str = item.get("status", "warning").lower()
+                try:
+                    status_enum = ComplianceStatus(status_str)
+                except ValueError:
+                    status_enum = ComplianceStatus.WARNING
+                    
+                severity_str = item.get("severity", "low").lower()
+                try:
+                    severity_enum = Severity(severity_str)
+                except ValueError:
+                    severity_enum = Severity.LOW
+                    
+                evaluation_results.append(
+                    RuleEvaluationResult(
+                        rule_code=item.get("rule_code", "UNKNOWN"),
+                        rule_name=item.get("rule_name", "Unknown AI Rule"),
+                        status=status_enum,
+                        severity=severity_enum,
+                        message=item.get("message", "Evaluated by AI"),
+                        expected_value=item.get("expected_value"),
+                        actual_value=item.get("actual_value"),
+                        recommendation=item.get("recommendation"),
+                    )
+                )
+            
+            # Verify we received evaluations
+            if evaluation_results:
+                ai_success = True
+                logger.info(f"AI compliance evaluation successful for verification '{verification_id}'")
+        except Exception as e:
+            logger.warning(
+                f"AI compliance evaluation failed for verification '{verification_id}', falling back to deterministic engine: {e}",
+                exc_info=True
+            )
+            evaluation_results = []
+
+    if not ai_success:
+        # Fallback to deterministic evaluation
+        logger.info(f"Using deterministic compliance engine for verification '{verification_id}'")
+        evaluation_results = [
+            rule.evaluate(field_map) for rule in ALL_RULES
+        ]
+
 
     # Calculate overall compliance score
     overall_score = calculate_compliance_score(evaluation_results)

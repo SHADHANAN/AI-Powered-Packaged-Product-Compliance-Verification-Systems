@@ -48,6 +48,14 @@ class Settings(BaseSettings):
     OCR_TIMEOUT_SECONDS: int = 30
     TESSERACT_CMD: Optional[str] = None
 
+    # AI Configuration
+    AI_ENABLED: bool = False
+    AI_PROVIDER: str = "mock"
+    AI_API_KEY: Optional[str] = None
+    AI_MODEL: str = "gemini-1.5-flash"
+    AI_TEMPERATURE: float = 0.0
+    AI_TIMEOUT_SECONDS: int = 10
+
     # Server Configuration
     HOST: str = "0.0.0.0"
     PORT: int = 8000
@@ -101,6 +109,15 @@ class Settings(BaseSettings):
         if value < 0 or value > 13:
             raise ValueError("OCR_PSM must be between 0 and 13")
         return value
+
+    @field_validator("AI_PROVIDER")
+    @classmethod
+    def validate_ai_provider(cls, value: str) -> str:
+        allowed = ["mock", "gemini", "openai"]
+        val_lower = value.lower().strip()
+        if val_lower not in allowed:
+            raise ValueError(f"AI_PROVIDER must be one of {allowed}")
+        return val_lower
 
     @field_validator("JWT_ALGORITHM")
     @classmethod
