@@ -354,16 +354,28 @@ def extract_fields_from_text(raw_text: str) -> List[Dict[str, Any]]:
         )
 
     # 10. Product Name
+       # 10. Product Name
     prod_name_match = re.search(
-        r"(?:PRODUCT\s*(?:NAME)?|ITEM\s*(?:NAME)?|COMMODITY)\s*[:\.-]?\s*([^\n\r]+)",
+        r"""
+        (?:
+            PRODUCT\s*(?:NAME)?
+            |ITEM\s*(?:NAME)?
+            |COMMODITY
+        )
+        \s*[:.\-]?\s*
+        ([^\n\r]+)
+        """,
         raw_text,
-        re.IGNORECASE,
+        re.IGNORECASE | re.VERBOSE,
     )
+
     if prod_name_match:
+        product_name = clean_snippet(prod_name_match.group(1))
+
         add_field(
             field_name="product_name",
-            field_value=prod_name_match.group(1),
-            confidence=0.80,
+            field_value=product_name,
+            confidence=0.88,
             source_text=prod_name_match.group(0),
         )
 
