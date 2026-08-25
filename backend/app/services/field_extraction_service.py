@@ -37,16 +37,35 @@ def extract_fields_from_text(raw_text: str) -> List[Dict[str, Any]]:
             })
 
     # 1. Maximum Retail Price (MRP)
+        # 1. Maximum Retail Price (MRP)
+    # Supports common label/currency variations:
+    # MRP: Rs. 120
+    # M.R.P. ₹120/-
+    # Maximum Retail Price: INR 120
+    # MRP (Incl. All Taxes): 120
     mrp_match = re.search(
-        r"(?:M\.?R\.?P\.?|MAX(?:IMUM)?\s*RETAIL\s*PRICE|PRICE|MRP\s*\(INCL\.\s*ALL\s*TAXES\))\s*[:\.-]?\s*(?:Rs\.?|INR|₹)?\s*([0-9]+(?:\.[0-9]{1,2})?)",
+        r"""
+        (?:
+            M\.?\s*R\.?\s*P\.?
+            |
+            MAX(?:IMUM)?\s+RETAIL\s+PRICE
+        )
+        (?:\s*\([^)]*\))?
+        \s*[:.\-]?\s*
+        (?:RS\.?|INR|₹)?
+        \s*
+        ([0-9]+(?:\.[0-9]{1,2})?)
+        \s*(?:/-)?
+        """,
         raw_text,
-        re.IGNORECASE,
+        re.IGNORECASE | re.VERBOSE,
     )
+
     if mrp_match:
         add_field(
             field_name="mrp",
             field_value=mrp_match.group(1),
-            confidence=0.95,
+            confidence=0.96,
             source_text=mrp_match.group(0),
         )
 
