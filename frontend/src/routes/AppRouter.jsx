@@ -40,6 +40,7 @@ const router = createBrowserRouter([
           { path: '/verification',        element: <Verification /> },
           { path: '/verification/:id',    element: <Verification /> },
           { path: '/reports',             element: <Reports /> },
+          { path: '/reports/:id',         element: <Reports /> },
           { path: '/history',             element: <History /> },
         ],
       },

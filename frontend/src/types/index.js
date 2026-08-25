@@ -99,6 +99,32 @@
  */
 
 /**
+ * @typedef {'PDF'|'EXCEL'|'CSV'|'JSON'} ReportFormat
+ */
+
+/**
+ * @typedef {'PENDING'|'PROCESSING'|'COMPLETED'|'FAILED'} ReportStatus
+ */
+
+/**
+ * @typedef {Object} ComplianceReport
+ * @property {number|string} id - Unique report reference (e.g. 'REP-1049')
+ * @property {number|string} [verification_id]
+ * @property {number|string} [product_id]
+ * @property {string} [product_name]
+ * @property {string} [category]
+ * @property {ComplianceStatus} compliance_status
+ * @property {number|null} [score]
+ * @property {ReportStatus} status
+ * @property {Array<ReportFormat>} [available_formats]
+ * @property {string} [generated_by]
+ * @property {string} [created_at]
+ * @property {string} [summary]
+ * @property {Array<RuleResult>} [rules]
+ * @property {Array<RuleResult>} [violations]
+ */
+
+/**
  * @typedef {Object} ApiError
  * @property {string} detail
  * @property {number} status_code

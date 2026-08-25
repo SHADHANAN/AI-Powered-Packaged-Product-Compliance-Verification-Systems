@@ -15,6 +15,7 @@ export const ROUTES = {
   VERIFICATION:       '/verification',
   VERIFICATION_DETAIL:'/verification/:id',
   REPORTS:            '/reports',
+  REPORT_DETAIL:      '/reports/:id',
   HISTORY:            '/history',
 };
 
