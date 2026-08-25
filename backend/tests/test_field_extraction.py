@@ -112,3 +112,62 @@ def test_empty_or_whitespace_text_handled_gracefully():
     assert extract_fields_from_text("") == []
     assert extract_fields_from_text("   \n\t  ") == []
     assert extract_fields_from_text("Random non-label gibberish words") == []
+
+def test_extraction_service_wrapper():
+    """Test the public extraction service wrapper."""
+    from app.services.extraction_service.service import extract_product_fields
+
+    text = "MRP: Rs. 120 NET QTY: 500 g BRAND: ABC"
+    fields = extract_product_fields(text)
+
+    field_names = {field["field_name"] for field in fields}
+
+    assert "mrp" in field_names
+    assert "net_quantity" in field_names
+    assert "quantity_unit" in field_names
+    assert "brand_name" in field_names
+def test_fields_to_dict():
+    """Test conversion of extracted fields into a keyed dictionary."""
+    from app.services.field_extraction_service import (
+        extract_fields_from_text,
+        fields_to_dict,
+    )
+
+    fields = extract_fields_from_text(
+        "MRP: Rs. 120 NET QTY: 500 g BRAND: ABC"
+    )
+
+    result = fields_to_dict(fields)
+
+    assert result["mrp"]["value"] == "120"
+    assert result["net_quantity"]["value"] == "500 g"
+    assert result["quantity_unit"]["value"] == "g"
+    assert result["brand_name"]["value"] == "ABC"
+
+    assert 0 <= result["mrp"]["confidence"] <= 1
+def test_extract_ocr_edge_case_formats():
+    """Test extraction with common OCR variations."""
+    from app.services.field_extraction_service import extract_fields_from_text
+
+    text = (
+        "M.R.P. : Rs. 199/-\n"
+        "NET QTY: 500 gms\n"
+        "BATCH NO: B-2026/08A\n"
+        "MFD: 07/2026\n"
+        "MADE IN INDIA\n"
+        "BRAND: Fresh Foods"
+    )
+
+    fields = extract_fields_from_text(text)
+    result = {
+        field["field_name"]: field["field_value"]
+        for field in fields
+    }
+
+    assert result["mrp"] == "199"
+    assert result["net_quantity"] == "500 gms"
+    assert result["quantity_unit"] == "gms"
+    assert result["batch_number"] == "B-2026/08A"
+    assert result["manufacturing_date"] == "07/2026"
+    assert result["country_of_origin"] == "INDIA"
+    assert result["brand_name"] == "Fresh Foods"
