@@ -26,13 +26,22 @@ def extract_fields_from_text(raw_text: str) -> List[Dict[str, Any]]:
     extracted: List[Dict[str, Any]] = []
     seen_fields = set()
 
-    def add_field(field_name: str, field_value: str, confidence: float, source_text: str):
+    def add_field(
+        field_name: str,
+        field_value: str,
+        confidence: float,
+        source_text: str,
+    ):
         if field_name not in seen_fields and field_value and field_value.strip():
             seen_fields.add(field_name)
+
+            # Keep confidence within the valid 0-1 range.
+            safe_confidence = max(0.0, min(1.0, confidence))
+
             extracted.append({
                 "field_name": field_name,
                 "field_value": clean_snippet(field_value),
-                "confidence": round(confidence, 2),
+                "confidence": round(safe_confidence, 2),
                 "source_text": clean_snippet(source_text),
             })
 
