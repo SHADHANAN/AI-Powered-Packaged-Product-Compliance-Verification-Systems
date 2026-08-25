@@ -15,6 +15,7 @@ from app.models.enums import AuditAction
 from app.models.user import User
 from app.models.verification import Verification
 from app.schemas.audit_log import AuditLogRead
+from app.schemas.compliance import ComplianceExplanationRead
 from app.schemas.compliance_check import ComplianceSummaryRead
 from app.schemas.extracted_field import ExtractedFieldRead
 from app.schemas.report import ComplianceReportData
@@ -164,6 +165,28 @@ def get_compliance_results(
         raise NotFoundException(f"Verification with id '{id}' not found")
     verify_verification_ownership(verification, current_user)
     return compliance_engine.get_verification_compliance_summary(db=db, verification_id=id)
+
+
+@router.get(
+    "/{id}/compliance/explain",
+    response_model=ComplianceExplanationRead,
+    status_code=status.HTTP_200_OK,
+    summary="Get AI-generated Compliance Explanation",
+    description="Retrieve an AI-generated regulatory explanation of the compliance status and violations for a verification run.",
+)
+def get_compliance_explanation(
+    id: uuid.UUID,
+    current_user: User = Depends(require_authenticated_user),
+    db: Session = Depends(get_db),
+) -> ComplianceExplanationRead:
+    """Generate or retrieve AI-assisted regulatory compliance explanation."""
+    verification = db.get(Verification, id)
+    if not verification:
+        raise NotFoundException(f"Verification with id '{id}' not found")
+    verify_verification_ownership(verification, current_user)
+    
+    from app.ai.explanation import generate_ai_compliance_explanation
+    return generate_ai_compliance_explanation(db=db, verification_id=id)
 
 
 @router.post(

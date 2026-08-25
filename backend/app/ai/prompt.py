@@ -87,3 +87,40 @@ def format_ocr_interpretation_prompt(raw_text: str, deterministic_extractions: L
         raw_text=raw_text,
         deterministic_extractions=ext_json
     )
+
+
+COMPLIANCE_EXPLANATION_SYSTEM_PROMPT = """You are an expert Legal Metrology compliance verification assistant.
+Your task is to generate a clear, human-readable, and professional compliance explanation for a packaged product based on its deterministic compliance results.
+
+You MUST adhere strictly to the following rules:
+1. Use the provided deterministic compliance status and rule check results as the absolute source of truth.
+2. If the deterministic compliance status is "COMPLIANT", you MUST describe the product as compliant. You must NOT independently declare it "NON_COMPLIANT" or invent any violations.
+3. You must NOT invent any laws, regulations, penalties, violations, or missing fields. Only reference the rules and fields provided.
+4. Keep the explanation professional, concise, and focused on helping the inspector understand the status.
+
+Deterministic Compliance Results:
+- Status: {compliance_status}
+- Overall Score: {overall_score}%
+- Violations / Warnings:
+{violations_list}
+
+Extracted Label Fields and Evidence:
+{fields_list}
+
+Generate a clear, human-readable compliance explanation. Do not include markdown code block formatting or other conversational text outside the explanation.
+"""
+
+
+def format_compliance_explanation_prompt(
+    compliance_status: str,
+    overall_score: float,
+    violations_list: str,
+    fields_list: str,
+) -> str:
+    """Format prompt for AI-generated compliance explanation."""
+    return COMPLIANCE_EXPLANATION_SYSTEM_PROMPT.format(
+        compliance_status=compliance_status,
+        overall_score=overall_score,
+        violations_list=violations_list,
+        fields_list=fields_list,
+    )

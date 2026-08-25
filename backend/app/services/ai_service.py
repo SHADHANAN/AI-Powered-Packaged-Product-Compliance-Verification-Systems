@@ -382,3 +382,112 @@ class AIService:
             raise AIServiceException(f"OpenAI API HTTP request failed: {e}")
         except Exception as e:
             raise AIServiceException(f"Failed to process OpenAI API response: {e}")
+
+    def generate_text(self, prompt: str) -> str:
+        """Call configured AI provider to generate raw text response.
+        
+        Args:
+            prompt: The formatted prompt to send to the provider.
+            
+        Returns:
+            The raw text response from the provider.
+            
+        Raises:
+            AIServiceException: If the AI provider fails.
+        """
+        provider = self.settings.AI_PROVIDER.lower().strip()
+        
+        if provider == "mock":
+            logger.info("Executing text generation using MOCK AI provider.")
+            return self._generate_text_mock(prompt)
+        elif provider == "gemini":
+            logger.info("Executing text generation using GEMINI AI provider.")
+            return self._generate_text_gemini(prompt)
+        elif provider == "openai":
+            logger.info("Executing text generation using OPENAI AI provider.")
+            return self._generate_text_openai(prompt)
+        else:
+            raise AIServiceException(f"Unsupported AI provider: {provider}")
+
+    def _generate_text_mock(self, prompt: str) -> str:
+        """Mock text generator."""
+        if "Status: COMPLIANT" in prompt:
+            return "Mock AI: The product satisfies all Legal Metrology packaged commodity regulations. No missing declarations or warnings detected."
+        elif "Status: PARTIALLY_COMPLIANT" in prompt:
+            return "Mock AI: The product is partially compliant but contains some warnings that require manual verification."
+        else:
+            return "Mock AI: The product has failed compliance verification because one or more mandatory declarations are missing or invalid."
+
+    def _generate_text_gemini(self, prompt: str) -> str:
+        """Call Gemini API for text generation."""
+        api_key = self.settings.AI_API_KEY
+        if not api_key:
+            raise AIServiceException("Gemini API key is not configured in environment variables.")
+        
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.settings.AI_MODEL}:generateContent?key={api_key}"
+        headers = {"Content-Type": "application/json"}
+        payload = {
+            "contents": [{
+                "parts": [{
+                    "text": prompt
+                }]
+            }],
+            "generationConfig": {
+                "temperature": self.settings.AI_TEMPERATURE
+            }
+        }
+        
+        try:
+            with httpx.Client(timeout=self.settings.AI_TIMEOUT_SECONDS) as client:
+                response = client.post(url, json=payload, headers=headers)
+                response.raise_for_status()
+                res_data = response.json()
+                
+                candidates = res_data.get("candidates", [])
+                if not candidates:
+                    raise AIServiceException("No response candidates returned from Gemini API.")
+                
+                content_parts = candidates[0].get("content", {}).get("parts", [])
+                if not content_parts:
+                    raise AIServiceException("Empty content parts in Gemini API response.")
+                
+                return content_parts[0].get("text", "").strip()
+        except httpx.HTTPError as e:
+            raise AIServiceException(f"Gemini API HTTP request failed: {e}")
+        except Exception as e:
+            raise AIServiceException(f"Failed to process Gemini API response: {e}")
+
+    def _generate_text_openai(self, prompt: str) -> str:
+        """Call OpenAI API for text generation."""
+        api_key = self.settings.AI_API_KEY
+        if not api_key:
+            raise AIServiceException("OpenAI API key is not configured in environment variables.")
+        
+        url = "https://api.openai.com/v1/chat/completions"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}"
+        }
+        payload = {
+            "model": self.settings.AI_MODEL,
+            "messages": [
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": self.settings.AI_TEMPERATURE
+        }
+        
+        try:
+            with httpx.Client(timeout=self.settings.AI_TIMEOUT_SECONDS) as client:
+                response = client.post(url, json=payload, headers=headers)
+                response.raise_for_status()
+                res_data = response.json()
+                
+                choices = res_data.get("choices", [])
+                if not choices:
+                    raise AIServiceException("No choices returned from OpenAI API.")
+                
+                return choices[0].get("message", {}).get("content", "").strip()
+        except httpx.HTTPError as e:
+            raise AIServiceException(f"OpenAI API HTTP request failed: {e}")
+        except Exception as e:
+            raise AIServiceException(f"Failed to process OpenAI API response: {e}")
