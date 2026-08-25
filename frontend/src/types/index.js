@@ -55,17 +55,47 @@
  */
 
 /**
- * @typedef {'compliant'|'non_compliant'|'pending'|'error'} ComplianceStatus
+ * @typedef {'COMPLIANT'|'NON_COMPLIANT'|'WARNING'|'PENDING'|'FAILED'|'compliant'|'non_compliant'|'pending'|'error'} ComplianceStatus
+ */
+
+/**
+ * @typedef {'HIGH'|'MEDIUM'|'LOW'|'INFO'} RuleSeverity
+ */
+
+/**
+ * @typedef {'PASS'|'FAIL'|'WARNING'|'NOT_APPLICABLE'} RuleStatus
+ */
+
+/**
+ * @typedef {Object} RuleResult
+ * @property {string} [id] - Rule unique identifier (e.g. 'RULE-6-1-E')
+ * @property {string} rule_name - Human-readable rule title
+ * @property {string} [rule_identifier] - Legal section reference
+ * @property {RuleStatus} status - 'PASS' | 'FAIL' | 'WARNING'
+ * @property {string} [detected_value] - Text extracted from packaging
+ * @property {string} [expected_requirement] - Regulatory mandate text
+ * @property {string} [violation_message] - Reason for failure if non-compliant
+ * @property {RuleSeverity} [severity] - 'HIGH' | 'MEDIUM' | 'LOW'
+ * @property {string} [evidence] - Raw OCR or bounding box evidence
+ * @property {string} [recommendation] - Corrective guidance for packaging
  */
 
 /**
  * @typedef {Object} VerificationResult
  * @property {number|string} id
  * @property {number|string} product_id
+ * @property {string} [product_name]
+ * @property {string} [category]
+ * @property {string} [image_url]
  * @property {ComplianceStatus} status
- * @property {number} score
- * @property {Array} issues
- * @property {string} created_at
+ * @property {number|null} [score] - Score percentage (0-100)
+ * @property {number} [total_rules_checked]
+ * @property {number} [passed_rules]
+ * @property {number} [failed_rules]
+ * @property {number} [warning_rules]
+ * @property {Array<RuleResult>} [rules]
+ * @property {Array<RuleResult>} [violations]
+ * @property {string} [created_at]
  */
 
 /**
