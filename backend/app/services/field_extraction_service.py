@@ -1,6 +1,7 @@
 import re
 from typing import Any, Dict, List
 
+from app.services.extraction_service.normalizer import normalize_ocr_text
 from app.utils.logging import get_logger
 
 logger = get_logger("app.services.field_extraction")
@@ -17,8 +18,10 @@ def extract_fields_from_text(raw_text: str) -> List[Dict[str, Any]]:
     Returns a list of dictionary representations of ExtractedField items.
     """
     if not raw_text or not raw_text.strip():
-        logger.info("Empty OCR text provided for field extraction")
-        return []
+         logger.info("Empty OCR text provided for field extraction")
+         return []
+
+    raw_text = normalize_ocr_text(raw_text)
 
     extracted: List[Dict[str, Any]] = []
     seen_fields = set()
