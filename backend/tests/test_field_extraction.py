@@ -112,3 +112,17 @@ def test_empty_or_whitespace_text_handled_gracefully():
     assert extract_fields_from_text("") == []
     assert extract_fields_from_text("   \n\t  ") == []
     assert extract_fields_from_text("Random non-label gibberish words") == []
+
+def test_extraction_service_wrapper():
+    """Test the public extraction service wrapper."""
+    from app.services.extraction_service.service import extract_product_fields
+
+    text = "MRP: Rs. 120 NET QTY: 500 g BRAND: ABC"
+    fields = extract_product_fields(text)
+
+    field_names = {field["field_name"] for field in fields}
+
+    assert "mrp" in field_names
+    assert "net_quantity" in field_names
+    assert "quantity_unit" in field_names
+    assert "brand_name" in field_names
