@@ -271,18 +271,44 @@ def extract_fields_from_text(raw_text: str) -> List[Dict[str, Any]]:
             )
 
     # 8. Importer
+        # 8. Importer
     importer_match = re.search(
-        r"(?:IMPORTED\s*(?:AND\s*PACKED\s*)?BY|IMPORTER|IMP\.\s*BY)\s*[:\.-]?\s*([^\n\r]+)",
+        r"""
+        (?:
+            IMPORTED\s*(?:AND\s*PACKED\s*)?BY
+            |IMPORTER
+            |IMP\.?\s*BY
+        )
+        \s*[:.\-]?\s*
+        ([^\n\r]+)
+        """,
         raw_text,
-        re.IGNORECASE,
+        re.IGNORECASE | re.VERBOSE,
     )
+
     if importer_match:
+        importer_value = clean_snippet(importer_match.group(1))
+
         add_field(
             field_name="importer",
-            field_value=importer_match.group(1),
-            confidence=0.85,
+            field_value=importer_value,
+            confidence=0.90,
             source_text=importer_match.group(0),
         )
+
+        address_match = re.search(
+            r"(?:ADDRESS|ADDR\.?)\s*[:.\-]?\s*([^\n\r]+)",
+            importer_value,
+            re.IGNORECASE,
+        )
+
+        if address_match:
+            add_field(
+                field_name="importer_address",
+                field_value=address_match.group(1),
+                confidence=0.82,
+                source_text=address_match.group(0),
+            )
 
     # 9. Customer Care Details
     care_match = re.search(
