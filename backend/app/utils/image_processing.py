@@ -1,6 +1,6 @@
 import os
 from PIL import Image, ImageEnhance, ImageFilter, ImageOps, UnidentifiedImageError
-
+from app.utils.orientation import detect_orientation, rotate_image_for_ocr
 from app.utils.exceptions import BadRequestException, NotFoundException
 from app.utils.logging import get_logger
 
@@ -27,52 +27,98 @@ def load_image(image_path: str) -> Image.Image:
 def to_grayscale(image: Image.Image) -> Image.Image:
     """Convert an RGB/RGBA image to grayscale (L mode)."""
     return ImageOps.grayscale(image)
+def reduce_noise(image: Image.Image, size: int = 3) -> Image.Image:
+    """Reduce small-scale image noise while preserving text edges."""
+    if size < 3 or size % 2 == 0:
+        raise ValueError("Noise filter size must be an odd value >= 3")
 
+    return image.filter(ImageFilter.MedianFilter(size=size))
 
 def enhance_contrast(image: Image.Image, factor: float = 1.5) -> Image.Image:
-    """Enhance contrast of an image to improve OCR legibility."""
+    """Enhance image contrast for OCR while validating the enhancement factor."""
+    if factor <= 0:
+        raise ValueError("Contrast factor must be greater than zero")
+
     enhancer = ImageEnhance.Contrast(image)
     return enhancer.enhance(factor)
 
 
 def enhance_sharpness(image: Image.Image, factor: float = 1.3) -> Image.Image:
-    """Enhance sharpness of an image."""
+    """Enhance image sharpness for OCR while validating the enhancement factor."""
+    if factor <= 0:
+        raise ValueError("Sharpness factor must be greater than zero")
+
     enhancer = ImageEnhance.Sharpness(image)
     return enhancer.enhance(factor)
 
+def resize_for_ocr(
+    image: Image.Image,
+    min_dimension: int = 1200,
+    max_dimension: int = 2400,
+) -> Image.Image:
+    """Resize an image to an OCR-friendly range while preserving aspect ratio."""
 
-def resize_for_ocr(image: Image.Image, min_dimension: int = 800, max_dimension: int = 2400) -> Image.Image:
-    """Scale small images up or very large images down for optimal OCR processing."""
     width, height = image.size
-    min_side = min(width, height)
-    max_side = max(width, height)
 
-    if min_side < min_dimension and min_side > 0:
-        scale = min_dimension / min_side
-        new_size = (int(width * scale), int(height * scale))
-        return image.resize(new_size, Image.Resampling.LANCZOS)
-    elif max_side > max_dimension:
-        scale = max_dimension / max_side
-        new_size = (int(width * scale), int(height * scale))
-        return image.resize(new_size, Image.Resampling.LANCZOS)
-    return image
+    if width <= 0 or height <= 0:
+        return image
+
+    shortest_side = min(width, height)
+    longest_side = max(width, height)
+
+    # Upscale small images so small label text has enough pixels.
+    if shortest_side < min_dimension:
+        scale = min_dimension / shortest_side
+    # Downscale very large images to avoid unnecessary OCR cost.
+    elif longest_side > max_dimension:
+        scale = max_dimension / longest_side
+    else:
+        return image
+
+    new_width = max(1, round(width * scale))
+    new_height = max(1, round(height * scale))
+
+    return image.resize(
+        (new_width, new_height),
+        Image.Resampling.LANCZOS,
+    )
 
 
 def preprocess_image_for_ocr(image_path: str) -> Image.Image:
-    """Run full deterministic preprocessing pipeline on a stored image."""
+    """Run the complete deterministic preprocessing pipeline for OCR."""
     image = load_image(image_path)
-    
-    # 1. Convert to RGB / Grayscale
+
+    # 1. Detect orientation before other transformations.
+    rotation = detect_orientation(image_path)
+
+    # 2. Rotate only when orientation detection is reliable.
+    if rotation is not None:
+        image = rotate_image_for_ocr(image, rotation)
+        logger.debug(
+            f"Applied OCR orientation correction: {rotation} degrees"
+        )
+    else:
+        logger.debug(
+            "OCR orientation correction skipped because confidence was insufficient"
+        )
+
+    # 3. Convert to grayscale.
     gray = to_grayscale(image)
 
-    # 2. Resize if necessary
+    # 4. Resize for OCR.
     resized = resize_for_ocr(gray)
 
-    # 3. Enhance contrast
-    contrasted = enhance_contrast(resized, factor=1.5)
+    # 5. Reduce image noise.
+    denoised = reduce_noise(resized, size=3)
 
-    # 4. Enhance sharpness
+    # 6. Enhance contrast.
+    contrasted = enhance_contrast(denoised, factor=1.5)
+
+    # 7. Enhance sharpness.
     sharp = enhance_sharpness(contrasted, factor=1.2)
 
-    logger.debug(f"Preprocessed image '{image_path}' -> {sharp.size}")
+    logger.debug(
+        f"Preprocessed image '{image_path}' -> {sharp.size}"
+    )
+
     return sharp

@@ -44,6 +44,7 @@ class Settings(BaseSettings):
     # OCR Configuration
     OCR_ENGINE: str = "tesseract"
     OCR_LANGUAGE: str = "eng"
+    OCR_PSM: int = 6
     OCR_TIMEOUT_SECONDS: int = 30
     TESSERACT_CMD: Optional[str] = None
 
@@ -94,6 +95,13 @@ class Settings(BaseSettings):
             raise ValueError("OCR_TIMEOUT_SECONDS must be between 1 and 300 seconds")
         return value
 
+    @field_validator("OCR_PSM")
+    @classmethod
+    def validate_ocr_psm(cls, value: int) -> int:
+        if value < 0 or value > 13:
+            raise ValueError("OCR_PSM must be between 0 and 13")
+        return value
+
     @field_validator("JWT_ALGORITHM")
     @classmethod
     def validate_jwt_algorithm(cls, value: str) -> str:
@@ -119,7 +127,9 @@ class Settings(BaseSettings):
 
             origins = self.get_cors_origins()
             if "*" in origins:
-                raise ValueError("Wildcard CORS origin '*' is strictly prohibited in production environment.")
+                raise ValueError(
+                    "Wildcard CORS origin '*' is strictly prohibited in production environment."
+                )
         return self
 
     def get_cors_origins(self) -> List[str]:
