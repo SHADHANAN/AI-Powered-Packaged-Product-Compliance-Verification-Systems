@@ -324,16 +324,32 @@ def extract_fields_from_text(raw_text: str) -> List[Dict[str, Any]]:
             )
 
     # 9. Customer Care Details
+        # 9. Customer Care Details
     care_match = re.search(
-        r"(?:CUSTOMER\s*CARE|CONSUMER\s*CARE|HELPLINE|FEEDBACK|CONTACT\s*US|TOLL\s*FREE|CARE\s*LINE)\s*[:\.-]?\s*([^\n\r]+)",
+        r"""
+        (?:
+            CUSTOMER\s*CARE
+            |CONSUMER\s*CARE
+            |HELPLINE
+            |FEEDBACK
+            |CONTACT\s*US
+            |TOLL\s*FREE
+            |CARE\s*LINE
+        )
+        \s*[:.\-]?\s*
+        ([^\n\r]+)
+        """,
         raw_text,
-        re.IGNORECASE,
+        re.IGNORECASE | re.VERBOSE,
     )
+
     if care_match:
+        care_value = clean_snippet(care_match.group(1))
+
         add_field(
             field_name="customer_care_details",
-            field_value=care_match.group(1),
-            confidence=0.85,
+            field_value=care_value,
+            confidence=0.92,
             source_text=care_match.group(0),
         )
 
