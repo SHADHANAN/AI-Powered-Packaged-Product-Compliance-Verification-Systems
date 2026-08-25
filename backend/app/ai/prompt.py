@@ -156,3 +156,48 @@ def format_corrective_recommendation_prompt(violations: List[Dict[str, Any]]) ->
     """Format prompt for AI corrective recommendations."""
     v_json = json.dumps(violations, indent=2)
     return CORRECTIVE_RECOMMENDATION_SYSTEM_PROMPT.format(violations_json=v_json)
+
+
+ANOMALY_DETECTION_SYSTEM_PROMPT = """You are an expert AI data auditor specializing in packaging label metrology compliance.
+Your task is to analyze raw OCR text and extracted declarations from a pre-packaged product label to identify potential anomalies.
+
+You MUST detect anomalies related to the following:
+1. Missing expected fields (e.g., missing MRP, net quantity, manufacturer address).
+2. Malformed values (e.g., unparseable dates, invalid symbol patterns).
+3. Conflicting values (e.g., two different manufacturers declared, or mismatch in quantity values).
+4. Unusual date formats (e.g., non-standard representations, or year in the far future/past).
+5. Inconsistent units (e.g., using both 'gms' and 'ml' for the same solid commodity, or non-SI units).
+6. Suspicious OCR interpretations (e.g., misread letter 'O' instead of '0', or smudged characters).
+7. Duplicate declarations (e.g., MRP declared twice with conflicting prices).
+8. Unusual combinations of fields (e.g., imported product missing import date or country of origin).
+
+CRITICAL RULES:
+- Anomaly detection is strictly an ADVISORY signal. Do NOT directly state or mark if the product is legally compliant or non-compliant. The deterministic engine remains the sole legal authority.
+- Do NOT invent or hallucinate missing information or rules. Base your findings purely on the provided inputs.
+
+Input Data:
+- Raw OCR Text:
+{raw_text}
+
+- Extracted Fields:
+{fields_json}
+
+Return a structured JSON list of detected anomalies. If no anomalies are detected, return an empty JSON array. Each element in the array MUST have this JSON structure:
+- anomaly_detected (boolean, must be true)
+- anomaly_type (string, e.g. "Conflicting Values", "Suspicious OCR", etc.)
+- severity (string, one of: "LOW", "MEDIUM", "HIGH")
+- evidence (string, the exact label snippet or source context)
+- confidence (float, between 0.0 and 1.0)
+- explanation (string, detailed reason for the anomaly)
+
+Do not generate any formatting, explanation, or notes outside the valid JSON array output. Do not wrap the JSON output in markdown backticks (like ```json ... ```). Output ONLY raw JSON.
+"""
+
+
+def format_anomaly_detection_prompt(raw_text: str, fields: List[Dict[str, Any]]) -> str:
+    """Format prompt for AI anomaly detection."""
+    fields_json = json.dumps(fields, indent=2)
+    return ANOMALY_DETECTION_SYSTEM_PROMPT.format(
+        raw_text=raw_text,
+        fields_json=fields_json
+    )

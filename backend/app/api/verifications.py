@@ -15,7 +15,7 @@ from app.models.enums import AuditAction
 from app.models.user import User
 from app.models.verification import Verification
 from app.schemas.audit_log import AuditLogRead
-from app.schemas.compliance import ComplianceExplanationRead, CorrectiveRecommendationsRead
+from app.schemas.compliance import ComplianceExplanationRead, CorrectiveRecommendationsRead, AnomalyDetectionRead
 from app.schemas.compliance_check import ComplianceSummaryRead
 from app.schemas.extracted_field import ExtractedFieldRead
 from app.schemas.report import ComplianceReportData
@@ -212,6 +212,32 @@ def get_compliance_recommendations(
     return {
         "verification_id": id,
         "recommendations": recs
+    }
+
+
+@router.get(
+    "/{id}/anomalies",
+    response_model=AnomalyDetectionRead,
+    status_code=status.HTTP_200_OK,
+    summary="Get AI-assisted Product Label Anomalies",
+    description="Retrieve AI-assisted product packaging label anomaly audit findings based on extracted fields and OCR text (advisory only).",
+)
+def get_label_anomalies(
+    id: uuid.UUID,
+    current_user: User = Depends(require_authenticated_user),
+    db: Session = Depends(get_db),
+) -> AnomalyDetectionRead:
+    """Retrieve AI-assisted product label anomaly audit findings."""
+    verification = db.get(Verification, id)
+    if not verification:
+        raise NotFoundException(f"Verification with id '{id}' not found")
+    verify_verification_ownership(verification, current_user)
+    
+    from app.ai.anomaly import generate_ai_anomaly_detection
+    anomalies = generate_ai_anomaly_detection(db=db, verification_id=id)
+    return {
+        "verification_id": id,
+        "anomalies": anomalies
     }
 
 

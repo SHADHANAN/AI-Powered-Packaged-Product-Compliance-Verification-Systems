@@ -411,7 +411,29 @@ class AIService:
 
     def _generate_text_mock(self, prompt: str) -> str:
         """Mock text generator."""
-        if "Deterministic Violations:" in prompt:
+        if "ANOMALY_DETECTION_SYSTEM_PROMPT" in prompt or "anomalies" in prompt:
+            ocr_start = prompt.find("Raw OCR Text:")
+            fields_start = prompt.find("- Extracted Fields:")
+            ocr_text_portion = ""
+            if ocr_start != -1 and fields_start != -1:
+                ocr_text_portion = prompt[ocr_start:fields_start].lower()
+            else:
+                ocr_text_portion = prompt.lower()
+                
+            if "anomaly" in ocr_text_portion or "mismatch" in ocr_text_portion or "duplicate" in ocr_text_portion:
+                return """[
+  {
+    "anomaly_detected": true,
+    "anomaly_type": "Conflicting Values",
+    "severity": "HIGH",
+    "evidence": "Net Qty: 500g and Net Weight: 400g",
+    "confidence": 0.95,
+    "explanation": "Mock AI Explanation: The packaging declares two mismatching net quantity values."
+  }
+]"""
+            else:
+                return "[]"
+        elif "Deterministic Violations:" in prompt:
             return """[
   {
     "issue": "MRP declaration is missing or invalid on the packaging label.",
