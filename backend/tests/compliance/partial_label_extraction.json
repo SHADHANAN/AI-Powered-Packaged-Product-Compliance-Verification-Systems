@@ -1,0 +1,29 @@
+{
+  "suite_name": "Partial Label Extraction Scenarios",
+  "description": "Tests compliance evaluations where only a subset of packaging declarations was extracted by OCR.",
+  "test_cases": [
+    {
+      "case_id": "PARTIAL_001_PDP_ONLY",
+      "description": "Only front PDP declarations (Product Name & Net Qty) extracted",
+      "input": {
+        "product_name": "Mountain Valley Mineral Water",
+        "net_quantity": "1 L"
+      },
+      "expected": {
+        "overall_status": "NON_COMPLIANT",
+        "risk_level": "HIGH",
+        "passed": 2,
+        "failed": 5,
+        "rule_statuses": {
+          "LM001": "PASS",
+          "LM002": "FAIL",
+          "LM003": "FAIL",
+          "LM004": "PASS",
+          "LM005": "FAIL",
+          "LM006": "FAIL",
+          "LM007": "FAIL"
+        }
+      }
+    }
+  ]
+}

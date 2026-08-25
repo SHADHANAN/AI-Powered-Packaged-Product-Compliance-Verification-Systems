@@ -1,0 +1,77 @@
+{
+  "suite_name": "Imported Product Compliance Scenarios",
+  "description": "Validates mandatory Country of Origin (LM008) and Importer Details (LM009) on imported commodities.",
+  "test_cases": [
+    {
+      "case_id": "IMP_001_VALID",
+      "description": "Imported olive oil with country of origin and importer details declared",
+      "input": {
+        "product_name": "Borges Extra Virgin Olive Oil",
+        "manufacturer_name": "Aceites Borges Pont S.A.U.",
+        "complete_address": "Avda. Josep Trepat s/n, 25300 Tarrega, Spain",
+        "net_quantity": "500 ml",
+        "mrp": "₹695",
+        "mfg_date": "02/2026",
+        "customer_care": "borgescare@borges.in",
+        "country_of_origin": "Spain",
+        "importer_details": "Borges India Pvt Ltd, Unit 201, Corporate Park, Gurugram 122002",
+        "product_category": "imported"
+      },
+      "expected": {
+        "overall_status": "COMPLIANT",
+        "compliance_score": 100.0,
+        "risk_level": "LOW",
+        "rule_statuses": {
+          "LM008": "PASS",
+          "LM009": "PASS"
+        }
+      }
+    },
+    {
+      "case_id": "IMP_002_MISSING_ORIGIN",
+      "description": "Imported item missing mandatory country of origin declaration",
+      "input": {
+        "product_name": "Korean Ramen Spicy Noodles",
+        "manufacturer_name": "Samyang Foods Co Ltd",
+        "complete_address": "Seoul, South Korea",
+        "net_quantity": "140 g",
+        "mrp": "₹150",
+        "mfg_date": "06/2026",
+        "customer_care": "noodles@importcare.in",
+        "importer_details": "Asian Foods Importers Ltd, Mumbai 400001",
+        "is_imported": true
+      },
+      "expected": {
+        "overall_status": "NON_COMPLIANT",
+        "failed": 1,
+        "rule_statuses": {
+          "LM008": "FAIL",
+          "LM009": "PASS"
+        }
+      }
+    },
+    {
+      "case_id": "IMP_003_MISSING_IMPORTER",
+      "description": "Imported item declaring origin but missing Indian importer name/address",
+      "input": {
+        "product_name": "Japanese Matcha Green Tea",
+        "manufacturer_name": "Kyoto Tea Co",
+        "complete_address": "Kyoto, Japan",
+        "net_quantity": "50 g",
+        "mrp": "₹850",
+        "mfg_date": "05/2026",
+        "customer_care": "tea@japan.com",
+        "country_of_origin": "Japan",
+        "product_category": "imported"
+      },
+      "expected": {
+        "overall_status": "NON_COMPLIANT",
+        "failed": 1,
+        "rule_statuses": {
+          "LM008": "PASS",
+          "LM009": "FAIL"
+        }
+      }
+    }
+  ]
+}

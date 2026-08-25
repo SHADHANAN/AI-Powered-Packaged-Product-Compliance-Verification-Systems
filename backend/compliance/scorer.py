@@ -283,8 +283,17 @@ class ComplianceScorer:
             score = 100.0
 
         score = max(0.0, min(100.0, score))
-        overall_status = self.calculate_overall_status(score)
-        risk_level = self.calculate_risk_level(score)
+
+        # Regulatory status determination: any failure forces NON_COMPLIANT
+        if failed_count > 0:
+            overall_status = OverallStatus.NON_COMPLIANT
+            risk_level = RiskLevel.HIGH
+        elif warning_count > 0 or score < self.compliant_threshold:
+            overall_status = OverallStatus.PARTIALLY_COMPLIANT
+            risk_level = RiskLevel.MEDIUM if score >= self.warning_threshold else RiskLevel.HIGH
+        else:
+            overall_status = OverallStatus.COMPLIANT
+            risk_level = RiskLevel.LOW
 
         report = ComplianceScoreReport(
             compliance_score=score,

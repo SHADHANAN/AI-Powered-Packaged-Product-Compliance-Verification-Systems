@@ -16,7 +16,7 @@ REQUIRED_FIELDS = [
     "rule_reference",
 ]
 
-VALID_APPLICABLE_TO = {"all", "imported", "domestic"}
+VALID_APPLICABLE_TO = {"all", "imported", "domestic", "food", "beverage", "cosmetic", "electronics", "medicine"}
 VALID_VALIDATION_TYPES = {"required", "date", "currency", "quantity", "address", "contact"}
 VALID_SEVERITIES = {"High", "Medium", "Low"}
 
@@ -53,7 +53,14 @@ def test_rule_fields_and_integrity():
         seen_ids.add(rule_id)
 
         assert isinstance(rule["mandatory"], bool), f"Rule {rule_id} 'mandatory' must be boolean"
-        assert rule["applicable_to"] in VALID_APPLICABLE_TO, f"Invalid applicable_to in {rule_id}: {rule['applicable_to']}"
+        
+        applicable_to = rule["applicable_to"]
+        if isinstance(applicable_to, list):
+            for cat in applicable_to:
+                assert cat in VALID_APPLICABLE_TO, f"Invalid applicable_to category '{cat}' in {rule_id}"
+        else:
+            assert applicable_to in VALID_APPLICABLE_TO, f"Invalid applicable_to in {rule_id}: {applicable_to}"
+
         assert rule["validation_type"] in VALID_VALIDATION_TYPES, f"Invalid validation_type in {rule_id}: {rule['validation_type']}"
         assert rule["severity"] in VALID_SEVERITIES, f"Invalid severity in {rule_id}: {rule['severity']}"
         assert len(rule["description"].strip()) > 0, f"Empty description in {rule_id}"

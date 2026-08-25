@@ -34,7 +34,7 @@ def test_sample_input_validation():
     assert report["overall_status"] == OverallStatus.COMPLIANT.value
     assert report["failed"] == 0
     assert report["passed"] == 7
-    assert report["not_applicable"] == 1  # Country of origin for domestic is NOT_APPLICABLE
+    assert report["not_applicable"] == 4  # LM008, LM009, LM010, LM011 are NOT_APPLICABLE for general domestic product
 
 
 def test_domestic_vs_imported_applicability():

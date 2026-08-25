@@ -112,6 +112,36 @@ DEFAULT_FIELD_ALIASES: Dict[str, List[str]] = {
         "made_in",
         "country_origin",
     ],
+    "importer_details": [
+        "importer_details",
+        "importer",
+        "importer_name",
+        "importer_address",
+        "imported_by",
+        "imported_by_name",
+        "importer_identity",
+    ],
+    "expiry_date": [
+        "expiry_date",
+        "best_before",
+        "use_by",
+        "exp_date",
+        "exp",
+        "use_before",
+        "shelf_life",
+        "expiry",
+    ],
+    "technical_specs": [
+        "technical_specs",
+        "model_number",
+        "model_name",
+        "model",
+        "voltage",
+        "power_rating",
+        "specs",
+        "rating",
+        "specifications",
+    ],
 }
 
 # Standard Metric & SI Units recognized under Legal Metrology (Packaged Commodities) Rules, 2011
@@ -506,7 +536,7 @@ class ComplianceEngine:
         return None, None
 
     def is_imported_product(self, product_data: Dict[str, Any], context: Optional[Dict[str, Any]] = None) -> bool:
-        """Determine whether the product is imported based on origin or flags."""
+        """Determine whether the product is imported based on origin, categories, or flags."""
         ctx = context or {}
 
         # 1. Check explicit flags in context or product_data
@@ -518,12 +548,22 @@ class ComplianceEngine:
                 val = product_data[key]
                 return str(val).strip().lower() in {"true", "1", "yes"}
 
-        # 2. Check product_type
-        prod_type = str(ctx.get("product_type") or product_data.get("product_type") or "").strip().lower()
-        if prod_type == "imported":
-            return True
-        if prod_type == "domestic":
-            return False
+        # 2. Check product_category / product_type / category for 'imported' or 'domestic'
+        for key in ["product_category", "product_type", "category", "categories"]:
+            raw_cat = ctx.get(key) or product_data.get(key)
+            if raw_cat:
+                if isinstance(raw_cat, list):
+                    cat_list = [str(x).strip().lower() for x in raw_cat]
+                    if "imported" in cat_list:
+                        return True
+                    if "domestic" in cat_list:
+                        return False
+                else:
+                    cat_str = str(raw_cat).strip().lower()
+                    if "imported" in cat_str:
+                        return True
+                    if "domestic" in cat_str:
+                        return False
 
         # 3. Check country of origin value
         coo_val, _ = self.extract_field_and_confidence("country_of_origin", product_data, context)
@@ -533,12 +573,54 @@ class ComplianceEngine:
                 return True
             return False
 
-        # 4. Check presence of importer name/address
-        if "importer" in product_data or "importer_name" in product_data or "import_date" in product_data:
+        # 4. Check presence of importer name/address/details
+        if (
+            "importer" in product_data
+            or "importer_name" in product_data
+            or "importer_details" in product_data
+            or "import_date" in product_data
+        ):
             return True
 
         # Default assumption: domestic unless declared imported
         return False
+
+    def get_active_product_scopes(
+        self,
+        product_data: Dict[str, Any],
+        context: Optional[Dict[str, Any]] = None,
+    ) -> Set[str]:
+        """Extract the complete set of applicable category scopes for the product.
+
+        Resolves general, origin-based ('imported'/'domestic'), and sector-specific
+        categories ('food', 'beverage', 'cosmetic', 'electronics', 'medicine', etc.).
+        """
+        scopes: Set[str] = {"all"}
+        ctx = context or {}
+
+        # 1. Resolve Origin Scope
+        if self.is_imported_product(product_data, context):
+            scopes.add("imported")
+        else:
+            scopes.add("domestic")
+
+        # 2. Resolve Sector & Custom Categories
+        for source in [ctx, product_data]:
+            for key in ["product_category", "category", "categories", "product_type", "commodity_type", "sector"]:
+                if key in source and source[key] is not None:
+                    raw_val = source[key]
+                    if isinstance(raw_val, (list, tuple, set)):
+                        for item in raw_val:
+                            if item is not None:
+                                scopes.add(str(item).strip().lower())
+                    elif isinstance(raw_val, str):
+                        # Split by comma, slash, or semicolon if multiple categories provided
+                        for part in re.split(r"[,;/|]", raw_val):
+                            clean_part = part.strip().lower()
+                            if clean_part:
+                                scopes.add(clean_part)
+
+        return scopes
 
     def is_rule_applicable(
         self,
@@ -546,21 +628,23 @@ class ComplianceEngine:
         product_data: Dict[str, Any],
         context: Optional[Dict[str, Any]] = None,
     ) -> bool:
-        """Check if a rule is applicable to the current product."""
-        applicable_to = str(rule.get("applicable_to", "all")).strip().lower()
+        """Check if a rule is applicable to the current product category and origin."""
+        applicable_to = rule.get("applicable_to", "all")
+        active_scopes = self.get_active_product_scopes(product_data, context)
 
-        if applicable_to == "all":
+        # Handle list of applicable categories
+        if isinstance(applicable_to, (list, tuple, set)):
+            clean_targets = {str(x).strip().lower() for x in applicable_to if x is not None}
+            if "all" in clean_targets:
+                return True
+            return bool(clean_targets & active_scopes)
+
+        # Handle single string category
+        app_str = str(applicable_to).strip().lower()
+        if app_str == "all":
             return True
 
-        is_imported = self.is_imported_product(product_data, context)
-
-        if applicable_to == "imported":
-            return is_imported
-
-        if applicable_to == "domestic":
-            return not is_imported
-
-        return True
+        return app_str in active_scopes
 
     def validate_rule(
         self,

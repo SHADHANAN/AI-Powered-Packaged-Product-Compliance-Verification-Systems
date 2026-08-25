@@ -1,0 +1,76 @@
+{
+  "suite_name": "Missing Mandatory Declarations Scenarios",
+  "description": "Validates packages with missing mandatory Legal Metrology declarations such as MRP, Net Qty, or Manufacturer Address.",
+  "test_cases": [
+    {
+      "case_id": "MISS_001_NO_MRP",
+      "description": "Commodity missing mandatory MRP declaration",
+      "input": {
+        "product_name": "Tata Tea Gold",
+        "manufacturer_name": "Tata Consumer Products Ltd",
+        "complete_address": "1, Bishop Lefroy Road, Kolkata - 700020",
+        "net_quantity": "500 g",
+        "mfg_date": "08/2026",
+        "customer_care": "care@tataconsumer.com",
+        "country_of_origin": "India"
+      },
+      "expected": {
+        "overall_status": "NON_COMPLIANT",
+        "risk_level": "HIGH",
+        "failed": 1,
+        "warnings": 0,
+        "rule_statuses": {
+          "LM001": "PASS",
+          "LM002": "PASS",
+          "LM003": "PASS",
+          "LM004": "PASS",
+          "LM005": "FAIL",
+          "LM006": "PASS",
+          "LM007": "PASS"
+        }
+      }
+    },
+    {
+      "case_id": "MISS_002_NO_QUANTITY",
+      "description": "Commodity missing Net Quantity declaration",
+      "input": {
+        "product_name": "Dabur Honey",
+        "manufacturer_name": "Dabur India Ltd",
+        "complete_address": "8/3 Asaf Ali Road, New Delhi 110002",
+        "mrp": "₹199",
+        "mfg_date": "08/2026",
+        "customer_care": "1800-103-1644",
+        "country_of_origin": "India"
+      },
+      "expected": {
+        "overall_status": "NON_COMPLIANT",
+        "risk_level": "HIGH",
+        "failed": 1,
+        "rule_statuses": {
+          "LM004": "FAIL"
+        }
+      }
+    },
+    {
+      "case_id": "MISS_003_NO_CUSTOMER_CARE",
+      "description": "Commodity missing customer care contact details",
+      "input": {
+        "product_name": "Aashirvaad Superior MP Atta",
+        "manufacturer_name": "ITC Limited",
+        "complete_address": "37 J.L. Nehru Road, Kolkata 700071",
+        "net_quantity": "5 kg",
+        "mrp": "₹280",
+        "mfg_date": "08/2026",
+        "country_of_origin": "India"
+      },
+      "expected": {
+        "overall_status": "NON_COMPLIANT",
+        "risk_level": "HIGH",
+        "failed": 1,
+        "rule_statuses": {
+          "LM007": "FAIL"
+        }
+      }
+    }
+  ]
+}
