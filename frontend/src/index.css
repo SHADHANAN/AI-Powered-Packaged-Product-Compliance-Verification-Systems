@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 /* ============================================
-   Global Base Styles & Ambient Background
+   Global Base Styles — Clean Government Tech
    ============================================ */
 @layer base {
   *,
@@ -18,25 +18,26 @@
   }
 
   body {
-    @apply bg-slate-50 text-navy-900 font-sans;
+    background-color: #F4F7FB;
+    color: #0B1220;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     min-height: 100vh;
-    line-height: 1.6;
+    line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    background-image: 
-      radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.05) 0px, transparent 50%),
-      radial-gradient(at 100% 0%, rgba(6, 182, 212, 0.05) 0px, transparent 50%),
-      radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.03) 0px, transparent 50%);
-    background-attachment: fixed;
   }
 
   ::selection {
-    @apply bg-primary-200 text-primary-950;
+    background-color: #C7D2FE;
+    color: #1E1B4B;
   }
 
-  /* Accessible glowing focus ring */
+  /* Accessible high-contrast focus ring */
   :focus-visible {
-    @apply outline-none ring-2 ring-primary-500/80 ring-offset-2 ring-offset-white;
+    outline: none;
+    ring: 2px;
+    ring-color: #4F46E5;
+    ring-offset: 2px;
   }
 
   :focus:not(:focus-visible) {
@@ -45,96 +46,86 @@
 }
 
 /* ============================================
-   Glassmorphic Components & Bento Tokens
+   Command Center Components & Design Tokens
    ============================================ */
 @layer components {
-  /* Translucent Glass Card */
-  .glass-panel {
-    background: rgba(255, 255, 255, 0.75);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.85);
-    box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.04), 0 0 0 1px rgba(226, 232, 240, 0.6);
-    border-radius: 1.25rem;
+  /* Premium Solid Card (Primary container) */
+  .cmd-card {
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 1rem;
+    box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04), 0 1px 2px -1px rgba(15, 23, 42, 0.02);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
-  .glass-panel-hover {
-    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  .glass-panel-hover:hover {
+  .cmd-card-hover:hover {
     transform: translateY(-2px);
-    box-shadow: 0 20px 35px -8px rgba(99, 102, 241, 0.08), 0 0 0 1px rgba(99, 102, 241, 0.2);
+    box-shadow: 0 10px 25px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -2px rgba(15, 23, 42, 0.02);
+    border-color: #CBD5E1;
   }
 
-  /* Bento Tile specific */
-  .glass-bento {
-    background: rgba(255, 255, 255, 0.82);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.9);
-    box-shadow: 0 8px 30px -4px rgba(15, 23, 42, 0.04), 0 0 0 1px rgba(226, 232, 240, 0.7);
-    border-radius: 1.5rem;
+  /* Hero Command Center Card */
+  .cmd-hero {
+    background: linear-gradient(135deg, #0B1220 0%, #172554 50%, #312E81 100%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 1.25rem;
+    box-shadow: 0 20px 40px -15px rgba(7, 12, 22, 0.45);
+    position: relative;
+    overflow: hidden;
   }
 
-  /* Deep Midnight Navy Glass Sidebar */
-  .glass-sidebar {
-    background: linear-gradient(180deg, #090d16 0%, #0f172a 100%);
+  /* Command Center Sidebar */
+  .cmd-sidebar {
+    background: linear-gradient(180deg, #0B1220 0%, #0D1629 50%, #111C33 100%);
     border-right: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 4px 0 24px 0 rgba(0, 0, 0, 0.25);
+    box-shadow: 4px 0 24px 0 rgba(0, 0, 0, 0.3);
   }
 
-  /* Glass Header */
-  .glass-header {
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+  /* Top Navigation Bar */
+  .cmd-navbar {
+    background: #FFFFFF;
+    border-bottom: 1px solid #E2E8F0;
+    box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.03);
+  }
+
+  /* Abstract Technical Grid Pattern */
+  .grid-pattern {
+    background-image: 
+      linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  /* Floating Glass HUD badge (decorative/overlay only) */
+  .glass-hud {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 0.75rem;
   }
 
   /* Glass Dropzone */
-  .glass-dropzone {
-    background: rgba(248, 250, 252, 0.6);
-    backdrop-filter: blur(12px);
-    border: 2px dashed rgba(203, 213, 225, 0.9);
-    border-radius: 1.25rem;
-    transition: all 0.25s ease;
+  .cmd-dropzone {
+    background: #FAFAFC;
+    border: 2px dashed #CBD5E1;
+    border-radius: 1rem;
+    transition: all 0.2s ease;
   }
 
-  .glass-dropzone:hover,
-  .glass-dropzone.drag-active {
-    background: rgba(238, 242, 255, 0.7);
-    border-color: rgba(99, 102, 241, 0.6);
-    box-shadow: 0 0 25px -4px rgba(99, 102, 241, 0.15);
+  .cmd-dropzone:hover,
+  .cmd-dropzone.drag-active {
+    background: #EEF2FF;
+    border-color: #4F46E5;
+    box-shadow: 0 0 20px -3px rgba(79, 70, 229, 0.15);
   }
 
-  /* Hero Gradient Accents */
-  .gradient-hero-navy {
-    background: linear-gradient(135deg, #090d16 0%, #1e1b4b 50%, #0f172a 100%);
-  }
-
-  .gradient-primary {
-    background: linear-gradient(135deg, #4f46e5 0%, #6366f1 50%, #06b6d4 100%);
-  }
-
-  .gradient-text-primary {
-    background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-
-  .gradient-text-accent {
-    background: linear-gradient(135deg, #059669 0%, #06b6d4 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-
-  /* Container */
+  /* Page container */
   .page-container {
     @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8;
   }
 
-  /* Modern Smooth Scrollbar */
+  /* Smooth Custom Scrollbars */
   .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -145,11 +136,11 @@
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(148, 163, 184, 0.4);
+    background: #CBD5E1;
     border-radius: 9999px;
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: rgba(100, 116, 139, 0.6);
+    background: #94A3B8;
   }
 }

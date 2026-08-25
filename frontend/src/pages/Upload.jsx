@@ -8,22 +8,12 @@ import { ROUTES } from '../utils/constants';
 import { formatFileSize, getErrorMessage } from '../utils/helpers';
 
 /**
- * Upload Page — Packaged product image submission for compliance verification.
- *
- * Implements:
- * - Drag-and-drop & native file picker
- * - Format & size validation (JPG/PNG/WEBP, Max 10MB)
- * - Safe object URL image preview with automatic cleanup
- * - Optional inspection metadata (Product Name, Category, Batch Number)
- * - Multipart/form-data upload to backend API
- * - Duplicate submission prevention
- * - Comprehensive state transitions (Initial, Selected, Uploading, Success, Error)
+ * Inspection Workstation Upload Page.
  */
 const Upload = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // State management
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [metadata, setMetadata] = useState({
@@ -37,10 +27,8 @@ const Upload = () => {
   const [successResult, setSuccessResult] = useState(null);
   const [error, setError] = useState(null);
 
-  // Ref lock to prevent duplicate concurrent submissions
   const submittingRef = useRef(false);
 
-  // Clean up object URL when component unmounts or preview changes
   const cleanupPreview = useCallback(() => {
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl);
@@ -50,22 +38,15 @@ const Upload = () => {
 
   useEffect(() => {
     return () => {
-      // Unmount cleanup
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
-      }
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
     };
   }, [previewUrl]);
-
-  // ── Handlers ─────────────────────────────────────────────────────────────
 
   const handleFileSelect = (file) => {
     cleanupPreview();
     setError(null);
     setSuccessResult(null);
     setSelectedFile(file);
-
-    // Create safe object URL for preview
     const url = URL.createObjectURL(file);
     setPreviewUrl(url);
   };
@@ -91,7 +72,7 @@ const Upload = () => {
     e?.preventDefault();
 
     if (!selectedFile) {
-      setError('Please select a product packaging image to upload.');
+      setError('Please select a product packaging label image to upload.');
       return;
     }
 
@@ -114,11 +95,10 @@ const Upload = () => {
         }
       );
 
-      setSuccessResult(response || { message: 'Product uploaded successfully.' });
+      setSuccessResult(response || { message: 'Product registered successfully for compliance verification.' });
       handleRemoveFile();
     } catch (err) {
-      const friendlyMessage = getErrorMessage(err);
-      setError(friendlyMessage);
+      setError(getErrorMessage(err));
     } finally {
       submittingRef.current = false;
       setUploading(false);
@@ -133,30 +113,29 @@ const Upload = () => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 animate-fade-in">
+    <div className="max-w-6xl mx-auto space-y-6 animate-fade-in">
       {/* ── Page Header ──────────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-surface-200">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-3 border-b border-slate-200">
         <div>
-          <div className="flex items-center gap-2 text-xs font-semibold text-primary-600 uppercase tracking-wider mb-1">
+          <div className="flex items-center gap-2 text-[10px] font-bold text-primary-600 uppercase tracking-widest mb-1 font-mono">
             <Link to={ROUTES.DASHBOARD} className="hover:underline">
-              Dashboard
+              COMMAND CENTER
             </Link>
             <span>/</span>
-            <span>Inspection Upload</span>
+            <span>NEW INSPECTION</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-surface-900 tracking-tight">
-            Upload Product
+          <h1 className="text-2xl sm:text-3xl font-black text-command-900 tracking-tight uppercase">
+            New Product Inspection
           </h1>
-          <p className="mt-1 text-sm sm:text-base text-surface-600">
-            Upload packaged product images or packaging labels for automated OCR text extraction and compliance verification.
+          <p className="mt-0.5 text-xs sm:text-sm text-slate-500 font-normal">
+            Upload packaged commodity labels for automated OCR declaration extraction and Legal Metrology rule verification.
           </p>
         </div>
 
-        {/* Action shortcut */}
         <div className="self-start sm:self-auto">
           <Link to={ROUTES.DASHBOARD}>
             <Button variant="secondary" size="sm">
-              Back to Dashboard
+              Back to Overview
             </Button>
           </Link>
         </div>
@@ -167,11 +146,11 @@ const Upload = () => {
         <div
           role="alert"
           aria-live="assertive"
-          className="flex items-start justify-between p-4 rounded-2xl bg-danger-50 border border-danger-200 text-danger-800 text-sm animate-slide-down shadow-sm"
+          className="flex items-start justify-between p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold animate-slide-down"
         >
-          <div className="flex items-start gap-3">
+          <div className="flex items-start gap-2.5">
             <svg
-              className="w-5 h-5 text-danger-500 shrink-0 mt-0.5"
+              className="w-4 h-4 text-rose-600 shrink-0 mt-0.5"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -184,13 +163,13 @@ const Upload = () => {
               />
             </svg>
             <div>
-              <p className="font-semibold">Upload Notice</p>
-              <p className="mt-0.5 text-danger-700">{error}</p>
+              <p className="font-bold">Inspection Notice</p>
+              <p className="mt-0.5 text-rose-700 font-normal">{error}</p>
             </div>
           </div>
           <button
             onClick={() => setError(null)}
-            className="p-1 rounded-lg text-danger-400 hover:text-danger-700 hover:bg-danger-100 transition-colors"
+            className="p-1 rounded-lg text-rose-400 hover:text-rose-700 hover:bg-rose-100 transition-colors"
             aria-label="Dismiss error"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -202,34 +181,33 @@ const Upload = () => {
 
       {/* ── Success State Card ───────────────────────────────────────────── */}
       {successResult && (
-        <Card variant="elevated" className="border-accent-200 bg-accent-50/40 p-6 sm:p-8 animate-scale-in">
-          <div className="flex flex-col items-center text-center space-y-4">
-            <div className="w-16 h-16 rounded-2xl bg-accent-100 text-accent-700 flex items-center justify-center shadow-sm">
-              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <Card variant="default" className="border-emerald-200 bg-emerald-50/40 p-6 sm:p-8 animate-scale-in">
+          <div className="flex flex-col items-center text-center space-y-4 max-w-lg mx-auto">
+            <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center shadow-sm">
+              <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
               </svg>
             </div>
 
             <div className="space-y-1">
-              <h2 className="text-xl font-bold text-surface-900">
-                Product Uploaded Successfully
+              <h2 className="text-xl font-black text-command-900">
+                Product Registered for Verification
               </h2>
-              <p className="text-sm text-surface-600 max-w-md">
-                {successResult.message || 'The packaging image was accepted and sent to the compliance verification engine.'}
+              <p className="text-xs sm:text-sm text-slate-600">
+                {successResult.message || 'Packaging image received and queued for optical character recognition and statutory checks.'}
               </p>
             </div>
 
-            {/* If backend returns a product or verification identifier */}
             {(successResult.product_id || successResult.verification_id || successResult.id) && (
-              <div className="p-3 rounded-xl bg-white border border-accent-200 text-xs text-surface-700 font-mono">
+              <div className="p-3 rounded-xl bg-white border border-emerald-200 text-xs font-mono">
                 Verification Reference ID:{' '}
-                <span className="font-bold text-accent-800">
+                <span className="font-bold text-emerald-800">
                   #{successResult.verification_id || successResult.product_id || successResult.id}
                 </span>
               </div>
             )}
 
-            <div className="pt-4 flex flex-wrap items-center justify-center gap-3">
+            <div className="pt-3 flex flex-wrap items-center justify-center gap-3">
               <Button
                 variant="primary"
                 size="md"
@@ -246,14 +224,6 @@ const Upload = () => {
                 Review Extracted Declarations
               </Button>
 
-              <Button
-                variant="outline"
-                size="md"
-                onClick={() => navigate(ROUTES.VERIFICATION)}
-              >
-                View Verifications
-              </Button>
-
               <Button variant="secondary" size="md" onClick={handleResetForm}>
                 Upload Another Product
               </Button>
@@ -262,261 +232,201 @@ const Upload = () => {
         </Card>
       )}
 
-      {/* ── Main Upload Form Layout ──────────────────────────────────────── */}
+      {/* ── Main Workstation Layout ──────────────────────────────────────── */}
       {!successResult && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left / Center: Upload Zone + Preview (2 Cols) */}
-          <div className="lg:col-span-2 space-y-6">
-            <Card variant="default" className="space-y-6">
-              <div>
-                <h2 className="text-lg font-bold text-surface-900">
-                  Product Packaging Image
+        <>
+          {!selectedFile ? (
+            /* Large Initial Upload Dropzone */
+            <Card variant="default" className="p-6 sm:p-10 space-y-6">
+              <div className="text-center max-w-lg mx-auto space-y-1 mb-2">
+                <h2 className="text-base sm:text-lg font-black text-command-900 uppercase tracking-tight">
+                  Packaging Label Upload
                 </h2>
-                <p className="text-xs text-surface-500 mt-0.5">
-                  Select or drag the front/back panel packaging photograph to inspect
+                <p className="text-xs text-slate-500">
+                  Submit clear photographs of commodity packages to evaluate statutory compliance under Legal Metrology Rules.
                 </p>
               </div>
 
-              {/* Upload Input / Drop Zone (when no file selected) */}
-              {!selectedFile ? (
-                <FileUpload
-                  onFileSelect={handleFileSelect}
-                  onError={handleValidationError}
-                  disabled={uploading}
-                />
-              ) : (
-                /* Selected File Preview Card */
-                <div className="space-y-4 rounded-2xl border border-surface-200 bg-surface-50/50 p-4 sm:p-5 animate-scale-in">
-                  <div className="flex items-center justify-between pb-3 border-b border-surface-200">
+              <FileUpload
+                onFileSelect={handleFileSelect}
+                onError={handleValidationError}
+                disabled={uploading}
+              />
+
+              <div className="pt-4 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-3 gap-4 text-center text-xs text-slate-500">
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+                  <span className="font-bold text-command-900 block mb-0.5">High Clarity</span>
+                  <span>Ensure MRP, dates, and declarations are legible</span>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+                  <span className="font-bold text-command-900 block mb-0.5">All Label Sides</span>
+                  <span>Front and principal display panels supported</span>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+                  <span className="font-bold text-command-900 block mb-0.5">Automated OCR</span>
+                  <span>PaddleOCR multi-lingual text extraction pipeline</span>
+                </div>
+              </div>
+            </Card>
+          ) : (
+            /* Two-Column Inspection Workstation */
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-scale-in">
+              {/* Left Column (7 cols): Large Product Image Preview */}
+              <div className="lg:col-span-7 space-y-4">
+                <Card variant="default" className="p-5 space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                     <div className="flex items-center gap-2">
-                      <Badge variant="success" size="sm" dot>
-                        Image Selected
+                      <Badge variant="success" size="xs" dot>
+                        LABEL LOADED
                       </Badge>
-                      <span className="text-xs text-surface-500">Ready for inspection</span>
+                      <span className="text-xs text-slate-500 font-medium">Ready for OCR processing</span>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="xs"
-                        onClick={handleRemoveFile}
-                        disabled={uploading}
-                        className="text-danger-600 hover:text-danger-700 hover:bg-danger-50"
-                      >
-                        Remove
-                      </Button>
-                    </div>
+                    <button
+                      onClick={handleRemoveFile}
+                      disabled={uploading}
+                      className="text-xs text-rose-600 hover:text-rose-800 font-bold uppercase tracking-wider"
+                    >
+                      Change Image
+                    </button>
                   </div>
 
-                  {/* Image Preview Container */}
-                  <div className="relative rounded-xl overflow-hidden bg-surface-900/5 border border-surface-200 flex items-center justify-center min-h-[220px] max-h-[360px]">
+                  {/* Large Image Frame */}
+                  <div className="relative rounded-xl overflow-hidden bg-slate-950 border border-slate-800 flex items-center justify-center min-h-[280px] max-h-[420px] p-2">
                     <img
                       src={previewUrl}
-                      alt="Selected packaging label preview"
-                      className="max-h-[340px] w-auto max-w-full object-contain rounded-lg"
+                      alt="Product inspection preview"
+                      className="max-h-[400px] w-auto max-w-full object-contain rounded-lg shadow-sm"
                     />
+                    <div className="absolute bottom-3 right-3 px-2.5 py-1 rounded-md bg-black/70 backdrop-blur-md text-[10px] font-mono text-cyan-300 border border-white/10">
+                      INSPECTION VIEW
+                    </div>
                   </div>
 
                   {/* File Metadata Details */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-xs">
-                    <div className="p-2.5 rounded-xl bg-white border border-surface-200">
-                      <span className="text-surface-400 font-medium block">File Name</span>
-                      <span className="font-semibold text-surface-800 truncate block mt-0.5" title={selectedFile.name}>
+                  <div className="grid grid-cols-3 gap-3 text-xs pt-1">
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+                      <span className="text-slate-400 font-bold uppercase text-[10px] block">File Name</span>
+                      <span className="font-bold text-command-900 truncate block mt-0.5" title={selectedFile.name}>
                         {selectedFile.name}
                       </span>
                     </div>
 
-                    <div className="p-2.5 rounded-xl bg-white border border-surface-200">
-                      <span className="text-surface-400 font-medium block">File Size</span>
-                      <span className="font-semibold text-surface-800 block mt-0.5">
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+                      <span className="text-slate-400 font-bold uppercase text-[10px] block">Size</span>
+                      <span className="font-bold text-command-900 block mt-0.5">
                         {formatFileSize(selectedFile.size)}
                       </span>
                     </div>
 
-                    <div className="p-2.5 rounded-xl bg-white border border-surface-200">
-                      <span className="text-surface-400 font-medium block">File Type</span>
-                      <span className="font-semibold text-surface-800 uppercase block mt-0.5">
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+                      <span className="text-slate-400 font-bold uppercase text-[10px] block">Format</span>
+                      <span className="font-bold text-command-900 uppercase block mt-0.5">
                         {selectedFile.type || selectedFile.name.split('.').pop()}
                       </span>
                     </div>
                   </div>
-                </div>
-              )}
+                </Card>
+              </div>
 
-              {/* Upload Progress Bar (when uploading) */}
-              {uploading && (
-                <div className="space-y-2 pt-2 animate-fade-in">
-                  <div className="flex items-center justify-between text-xs font-semibold text-surface-700">
-                    <span className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-primary-500 animate-ping" />
-                      Uploading & initializing OCR engine...
-                    </span>
-                    <span>{uploadProgress > 0 ? `${uploadProgress}%` : 'Processing...'}</span>
+              {/* Right Column (5 cols): Inspection Metadata & Trigger Action */}
+              <div className="lg:col-span-5 space-y-4">
+                <Card variant="default" className="p-5 sm:p-6 space-y-5">
+                  <div>
+                    <h2 className="text-sm font-black uppercase tracking-wider text-command-900">
+                      Product Information
+                    </h2>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Optional metadata to associate with this statutory inspection audit
+                    </p>
                   </div>
-                  <div className="w-full h-2 rounded-full bg-surface-200 overflow-hidden">
-                    <div
-                      className="h-full bg-primary-600 rounded-full transition-all duration-300 ease-out"
-                      style={{ width: `${Math.max(uploadProgress, 15)}%` }}
+
+                  <div className="space-y-3.5">
+                    <Input
+                      id="product-name"
+                      label="Product / Commodity Name"
+                      name="name"
+                      value={metadata.name}
+                      onChange={handleMetadataChange}
+                      placeholder="e.g. Fortified Wheat Flour 5kg"
+                      disabled={uploading}
+                      size="sm"
+                    />
+
+                    <Input
+                      id="product-category"
+                      label="Product Category"
+                      name="category"
+                      value={metadata.category}
+                      onChange={handleMetadataChange}
+                      placeholder="e.g. Food & Grocery, Cosmetics"
+                      disabled={uploading}
+                      size="sm"
+                    />
+
+                    <Input
+                      id="product-batch"
+                      label="Batch / Lot Identification"
+                      name="batch_number"
+                      value={metadata.batch_number}
+                      onChange={handleMetadataChange}
+                      placeholder="e.g. LOT-2026-X01"
+                      disabled={uploading}
+                      size="sm"
                     />
                   </div>
-                </div>
-              )}
-            </Card>
 
-            {/* Optional Inspection Details Metadata Card */}
-            <Card variant="default" className="space-y-4">
-              <div>
-                <h2 className="text-base font-bold text-surface-900">
-                  Inspection Details <span className="text-xs text-surface-400 font-normal">(Optional)</span>
-                </h2>
-                <p className="text-xs text-surface-500 mt-0.5">
-                  Provide supplementary product packaging information for faster metadata tagging
-                </p>
+                  {/* Upload Progress Bar */}
+                  {uploading && (
+                    <div className="space-y-2 pt-2 animate-fade-in">
+                      <div className="flex items-center justify-between text-xs font-bold text-command-900">
+                        <span className="flex items-center gap-1.5 text-primary-600">
+                          <span className="w-2 h-2 rounded-full bg-primary-600 animate-ping" />
+                          Running PaddleOCR extraction...
+                        </span>
+                        <span>{uploadProgress > 0 ? `${uploadProgress}%` : 'Processing...'}</span>
+                      </div>
+                      <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                        <div
+                          className="h-full bg-primary-600 rounded-full transition-all duration-300 ease-out"
+                          style={{ width: `${Math.max(uploadProgress, 20)}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-3">
+                    <Button
+                      variant="secondary"
+                      size="md"
+                      onClick={handleResetForm}
+                      disabled={uploading}
+                    >
+                      Cancel
+                    </Button>
+
+                    <Button
+                      id="start-verification-button"
+                      variant="primary"
+                      size="md"
+                      onClick={handleUpload}
+                      loading={uploading}
+                      disabled={!selectedFile || uploading}
+                      rightIcon={
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                        </svg>
+                      }
+                    >
+                      {uploading ? 'Processing…' : 'Start Verification'}
+                    </Button>
+                  </div>
+                </Card>
               </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Input
-                  id="product-name"
-                  label="Product / Commodity Name"
-                  name="name"
-                  value={metadata.name}
-                  onChange={handleMetadataChange}
-                  placeholder="e.g. Premium Basmati Rice 1kg"
-                  disabled={uploading}
-                  size="sm"
-                />
-
-                <Input
-                  id="product-category"
-                  label="Product Category"
-                  name="category"
-                  value={metadata.category}
-                  onChange={handleMetadataChange}
-                  placeholder="e.g. Food & Beverages, Cosmetics, FMCG"
-                  disabled={uploading}
-                  size="sm"
-                />
-
-                <div className="sm:col-span-2">
-                  <Input
-                    id="product-batch"
-                    label="Batch / Lot Number"
-                    name="batch_number"
-                    value={metadata.batch_number}
-                    onChange={handleMetadataChange}
-                    placeholder="e.g. BATCH-2026-X99"
-                    disabled={uploading}
-                    size="sm"
-                  />
-                </div>
-              </div>
-            </Card>
-
-            {/* Submit & Cancel Action Bar */}
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <Button
-                variant="secondary"
-                size="md"
-                onClick={handleResetForm}
-                disabled={uploading || (!selectedFile && !metadata.name)}
-              >
-                Reset
-              </Button>
-
-              <Button
-                id="start-verification-button"
-                variant="primary"
-                size="md"
-                onClick={handleUpload}
-                loading={uploading}
-                disabled={!selectedFile || uploading}
-                rightIcon={
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                  </svg>
-                }
-              >
-                {uploading ? 'Processing Image...' : 'Start Verification'}
-              </Button>
             </div>
-          </div>
-
-          {/* Right Column: Inspection Guidelines & Legal Standards (1 Col) */}
-          <div className="space-y-6">
-            {/* Guidelines Card */}
-            <Card variant="default" className="space-y-4">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a3 3 0 1 0-3-3m3 3h3" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-surface-900">
-                    Inspection Guidelines
-                  </h3>
-                  <p className="text-[11px] text-surface-500">For optimal OCR verification</p>
-                </div>
-              </div>
-
-              <ul className="space-y-2.5 text-xs text-surface-600">
-                <li className="flex items-start gap-2">
-                  <svg className="w-4 h-4 text-accent-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                  </svg>
-                  <span><strong>Clear Lighting:</strong> Ensure the label text is sharp, glare-free, and not obscured by shadows.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <svg className="w-4 h-4 text-accent-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                  </svg>
-                  <span><strong>Mandatory Declarations:</strong> Capture MRP, Net Quantity, Best Before date, and Manufacturer details clearly.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <svg className="w-4 h-4 text-accent-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                  </svg>
-                  <span><strong>Orientation:</strong> Upload images in upright orientation for accurate font size and layout ratio analysis.</span>
-                </li>
-              </ul>
-            </Card>
-
-            {/* Standards Checked Card */}
-            <Card variant="default" className="space-y-3 bg-surface-50/50">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold text-surface-700 uppercase tracking-wider">
-                  Automated Checks
-                </h3>
-                <Badge variant="info" size="sm">
-                  5 Rules
-                </Badge>
-              </div>
-
-              <div className="space-y-2 text-xs">
-                <div className="p-2 rounded-lg bg-white border border-surface-200 flex items-center justify-between">
-                  <span className="font-medium text-surface-700">MRP Declaration</span>
-                  <span className="text-[11px] text-surface-400">Rule 6(1)(e)</span>
-                </div>
-                <div className="p-2 rounded-lg bg-white border border-surface-200 flex items-center justify-between">
-                  <span className="font-medium text-surface-700">Net Quantity / USP</span>
-                  <span className="text-[11px] text-surface-400">Rule 6(1)(c)</span>
-                </div>
-                <div className="p-2 rounded-lg bg-white border border-surface-200 flex items-center justify-between">
-                  <span className="font-medium text-surface-700">Mfg / Expiry Date</span>
-                  <span className="text-[11px] text-surface-400">Rule 6(1)(d)</span>
-                </div>
-                <div className="p-2 rounded-lg bg-white border border-surface-200 flex items-center justify-between">
-                  <span className="font-medium text-surface-700">Manufacturer Info</span>
-                  <span className="text-[11px] text-surface-400">Rule 6(1)(a)</span>
-                </div>
-                <div className="p-2 rounded-lg bg-white border border-surface-200 flex items-center justify-between">
-                  <span className="font-medium text-surface-700">Consumer Care Contact</span>
-                  <span className="text-[11px] text-surface-400">Rule 6(1)(f)</span>
-                </div>
-              </div>
-            </Card>
-          </div>
-        </div>
+          )}
+        </>
       )}
     </div>
   );
