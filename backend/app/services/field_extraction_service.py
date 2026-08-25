@@ -229,18 +229,46 @@ def extract_fields_from_text(raw_text: str) -> List[Dict[str, Any]]:
             )
 
     # 7. Manufacturer
+        # 7. Manufacturer
     mfr_match = re.search(
-        r"(?:MFD(?:\s*BY|\.)?|MANUFACTURED\s*(?:AND\s*PACKED\s*)?BY|PRODUCED\s*BY)\s*[:\.-]?\s*([^\n\r]+)",
+        r"""
+        (?:
+            MFD(?:\s*BY|\.)?
+            |MANUFACTURED\s*(?:AND\s*PACKED\s*)?BY
+            |PRODUCED\s*BY
+            |MANUFACTURER
+        )
+        \s*[:.\-]?\s*
+        ([^\n\r]+)
+        """,
         raw_text,
-        re.IGNORECASE,
+        re.IGNORECASE | re.VERBOSE,
     )
+
     if mfr_match:
+        manufacturer_value = clean_snippet(mfr_match.group(1))
+
         add_field(
             field_name="manufacturer",
-            field_value=mfr_match.group(1),
-            confidence=0.85,
+            field_value=manufacturer_value,
+            confidence=0.90,
             source_text=mfr_match.group(0),
         )
+
+        # Preserve a likely address when it appears after the manufacturer.
+        address_match = re.search(
+            r"(?:ADDRESS|ADDR\.?)\s*[:.\-]?\s*([^\n\r]+)",
+            manufacturer_value,
+            re.IGNORECASE,
+        )
+
+        if address_match:
+            add_field(
+                field_name="manufacturer_address",
+                field_value=address_match.group(1),
+                confidence=0.82,
+                source_text=address_match.group(0),
+            )
 
     # 8. Importer
     importer_match = re.search(
