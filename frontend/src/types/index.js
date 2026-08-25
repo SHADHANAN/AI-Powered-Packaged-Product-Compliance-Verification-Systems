@@ -99,6 +99,21 @@
  */
 
 /**
+ * @typedef {Object} HistoryRecord
+ * @property {number|string} id - Verification ID
+ * @property {number|string} [product_id] - Associated product ID
+ * @property {string} [product_name] - Commodity name
+ * @property {string} [category] - Product category
+ * @property {string} [batch_number] - Lot/batch identifier
+ * @property {string} [image_url] - Package scan URL
+ * @property {ComplianceStatus} compliance_status - Overall compliance evaluation
+ * @property {number|null} [score] - Compliance conformity score (0-100)
+ * @property {string} [inspector] - Authorized officer name
+ * @property {string|number} [report_id] - Associated report ID
+ * @property {string} [created_at] - Inspection timestamp
+ */
+
+/**
  * @typedef {'PDF'|'EXCEL'|'CSV'|'JSON'} ReportFormat
  */
 
