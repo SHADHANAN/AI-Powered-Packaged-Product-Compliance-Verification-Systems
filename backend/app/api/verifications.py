@@ -15,7 +15,7 @@ from app.models.enums import AuditAction
 from app.models.user import User
 from app.models.verification import Verification
 from app.schemas.audit_log import AuditLogRead
-from app.schemas.compliance import ComplianceExplanationRead, CorrectiveRecommendationsRead, AnomalyDetectionRead
+from app.schemas.compliance import ComplianceExplanationRead, CorrectiveRecommendationsRead, AnomalyDetectionRead, ComplianceValidationRead
 from app.schemas.compliance_check import ComplianceSummaryRead
 from app.schemas.extracted_field import ExtractedFieldRead
 from app.schemas.report import ComplianceReportData
@@ -238,6 +238,32 @@ def get_label_anomalies(
     return {
         "verification_id": id,
         "anomalies": anomalies
+    }
+
+
+@router.get(
+    "/{id}/compliance/validate",
+    response_model=ComplianceValidationRead,
+    status_code=status.HTTP_200_OK,
+    summary="Validate AI vs Deterministic Compliance Results",
+    description="Compare AI-generated compliance checking results with the authoritative deterministic results.",
+)
+def get_compliance_validation(
+    id: uuid.UUID,
+    current_user: User = Depends(require_authenticated_user),
+    db: Session = Depends(get_db),
+) -> ComplianceValidationRead:
+    """Compare AI-assisted and deterministic compliance checking outcomes (DETERMINISTIC wins)."""
+    verification = db.get(Verification, id)
+    if not verification:
+        raise NotFoundException(f"Verification with id '{id}' not found")
+    verify_verification_ownership(verification, current_user)
+    
+    from app.ai.validation import validate_ai_vs_deterministic
+    val_data = validate_ai_vs_deterministic(db=db, verification_id=id)
+    return {
+        "verification_id": id,
+        **val_data
     }
 
 

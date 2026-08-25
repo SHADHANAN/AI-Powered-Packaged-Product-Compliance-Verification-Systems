@@ -46,3 +46,15 @@ class AnomalyDetectionRead(BaseModel):
 
     verification_id: uuid.UUID = Field(..., description="ID of the verification run.")
     anomalies: List[AnomalyDetectionItem] = Field(default_factory=list, description="List of detected anomalies (advisory only).")
+
+
+class ComplianceValidationRead(BaseModel):
+    """Structured response representing the check-and-balance comparison of deterministic and AI compliance outcomes."""
+
+    verification_id: uuid.UUID = Field(..., description="ID of the verification run.")
+    deterministic_result: str = Field(..., description="The authoritative deterministic compliance status (COMPLIANT or NON_COMPLIANT).")
+    ai_result: str = Field(..., description="The advisory AI compliance status (COMPLIANT or NON_COMPLIANT).")
+    agreement: bool = Field(..., description="True if both engines agree, False otherwise.")
+    final_result: str = Field(..., description="The final compliance status, which must match the authoritative deterministic result.")
+    review_required: bool = Field(..., description="True if a disagreement exists, requiring manual review.")
+    decision_source: str = Field(..., description="The authoritative engine or decision rule that resolved the final compliance status.")
