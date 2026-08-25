@@ -1,4 +1,6 @@
 import { NavLink } from 'react-router-dom';
+import useAuth from '../hooks/useAuth';
+import { Badge } from './ui';
 
 const navItems = [
   {
@@ -48,13 +50,33 @@ const navItems = [
   },
 ];
 
+const ROLE_VARIANTS = {
+  ADMIN:     'danger',
+  INSPECTOR: 'info',
+  VIEWER:    'neutral',
+};
+
 /**
- * Sidebar navigation with active-state highlighting and collapse on mobile.
+ * Sidebar navigation with active-state highlighting, user info panel, and logout.
  */
 const Sidebar = ({ isOpen, onClose }) => {
+  const { user, logout, isAuthenticated } = useAuth();
+
+  const initials = user?.name
+    ? user.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
+    : user?.email?.[0]?.toUpperCase() || 'U';
+
+  const displayName = user?.name || user?.email || 'User';
+  const role = user?.role || '';
+
+  const handleLogout = () => {
+    onClose?.();
+    logout();
+  };
+
   return (
     <>
-      {/* Mobile overlay */}
+      {/* Mobile backdrop overlay */}
       {isOpen && (
         <div
           className="fixed inset-0 z-40 bg-surface-950/30 backdrop-blur-sm lg:hidden animate-fade-in"
@@ -88,20 +110,15 @@ const Sidebar = ({ isOpen, onClose }) => {
               onClick={onClose}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group
-                ${
-                  isActive
-                    ? 'bg-primary-50 text-primary-700 shadow-sm'
-                    : 'text-surface-600 hover:bg-surface-50 hover:text-surface-900'
+                ${isActive
+                  ? 'bg-primary-50 text-primary-700 shadow-sm'
+                  : 'text-surface-600 hover:bg-surface-50 hover:text-surface-900'
                 }`
               }
             >
               {({ isActive }) => (
                 <>
-                  <span
-                    className={`transition-colors ${
-                      isActive ? 'text-primary-600' : 'text-surface-400 group-hover:text-surface-600'
-                    }`}
-                  >
+                  <span className={`transition-colors ${isActive ? 'text-primary-600' : 'text-surface-400 group-hover:text-surface-600'}`}>
                     {item.icon}
                   </span>
                   {item.label}
@@ -113,18 +130,41 @@ const Sidebar = ({ isOpen, onClose }) => {
             </NavLink>
           ))}
 
-          {/* Bottom section */}
-          <div className="mt-auto pt-4 border-t border-surface-100">
-            <NavLink
-              to="/login"
-              onClick={onClose}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-surface-500 hover:bg-surface-50 hover:text-surface-900 transition-all"
+          {/* Bottom: user info + logout */}
+          <div className="mt-auto pt-4 border-t border-surface-100 space-y-2">
+            {isAuthenticated && user && (
+              <div className="px-3 py-2.5 rounded-xl bg-surface-50 border border-surface-100">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center shrink-0">
+                    <span className="text-xs font-bold text-white">{initials}</span>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-surface-800 truncate">{displayName}</p>
+                    {user.email && (
+                      <p className="text-[11px] text-surface-500 truncate">{user.email}</p>
+                    )}
+                    {role && (
+                      <Badge variant={ROLE_VARIANTS[role] || 'neutral'} size="sm" className="mt-1">
+                        {role}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <button
+              id="sidebar-logout-button"
+              onClick={handleLogout}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium
+                text-danger-600 hover:bg-danger-50 transition-colors"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15m-3 0-3-3m0 0 3-3m-3 3H15" />
+                <path strokeLinecap="round" strokeLinejoin="round"
+                  d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
               </svg>
-              Login
-            </NavLink>
+              Sign out
+            </button>
           </div>
         </nav>
       </aside>

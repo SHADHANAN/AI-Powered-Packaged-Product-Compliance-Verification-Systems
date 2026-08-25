@@ -1,50 +1,63 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-import { MainLayout, AuthLayout } from '../layouts';
+import { MainLayout } from '../layouts';
+import { AuthLayout } from '../layouts';
+import { ProtectedRoute, PublicRoute } from './ProtectedRoute';
 
 // Pages
-import Dashboard from '../pages/Dashboard';
-import Upload from '../pages/Upload';
+import Dashboard    from '../pages/Dashboard';
+import Upload       from '../pages/Upload';
 import Verification from '../pages/Verification';
-import Reports from '../pages/Reports';
-import History from '../pages/History';
-import Login from '../pages/Login';
-import NotFound from '../pages/NotFound';
+import Reports      from '../pages/Reports';
+import History      from '../pages/History';
+import Login        from '../pages/Login';
+import NotFound     from '../pages/NotFound';
 
 /**
- * Application route definitions.
+ * Application route tree.
  *
- * - MainLayout wraps all dashboard/app pages (sidebar + navbar).
- * - AuthLayout wraps login/register pages (centered card).
- * - 404 catch-all at the root level.
+ * Route protection layers:
+ *
+ *  PublicRoute   → /login          (redirects to / if already authenticated)
+ *  ProtectedRoute → / + sub-routes (redirects to /login if not authenticated)
+ *
+ * ProtectedRoute also handles the initial loading state so protected pages
+ * never flash before the session is verified.
  */
 const router = createBrowserRouter([
+  // ── Protected routes (require auth) ─────────────────────────────────────
   {
-    path: '/',
-    element: <MainLayout />,
+    element: <ProtectedRoute />,
     children: [
-      { index: true, element: <Dashboard /> },
-      { path: 'upload', element: <Upload /> },
-      { path: 'verification', element: <Verification /> },
-      { path: 'reports', element: <Reports /> },
-      { path: 'history', element: <History /> },
+      {
+        element: <MainLayout />,
+        children: [
+          { path: '/',            element: <Dashboard /> },
+          { path: '/upload',      element: <Upload /> },
+          { path: '/verification',element: <Verification /> },
+          { path: '/reports',     element: <Reports /> },
+          { path: '/history',     element: <History /> },
+        ],
+      },
     ],
   },
+
+  // ── Public routes (redirect to dashboard if authenticated) ───────────────
   {
-    path: '/',
-    element: <AuthLayout />,
+    element: <PublicRoute />,
     children: [
-      { path: 'login', element: <Login /> },
+      {
+        element: <AuthLayout />,
+        children: [
+          { path: '/login', element: <Login /> },
+        ],
+      },
     ],
   },
-  {
-    path: '*',
-    element: <NotFound />,
-  },
+
+  // ── 404 catch-all ────────────────────────────────────────────────────────
+  { path: '*', element: <NotFound /> },
 ]);
 
-/**
- * Router component to be mounted in App.
- */
 const AppRouter = () => <RouterProvider router={router} />;
 
 export default AppRouter;

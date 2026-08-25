@@ -1,10 +1,13 @@
 import axios from 'axios';
+import { getToken, removeToken } from '../utils/tokenStorage';
 
 /**
  * Axios instance pre-configured with the backend API base URL.
- * 
- * The base URL is read from `VITE_API_BASE_URL` env variable.
- * Falls back to '/api' which works with the Vite dev proxy.
+ *
+ * - baseURL from VITE_API_BASE_URL env var (falls back to '/api' for Vite dev proxy)
+ * - Automatically attaches JWT Bearer token on every request
+ * - Handles 401 globally: clears token and redirects to /login
+ * - Guards against infinite redirect loops on the login route itself
  */
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
@@ -14,10 +17,11 @@ const apiClient = axios.create({
   timeout: 30000,
 });
 
-// ── Request Interceptor ──────────────────────────────────────
+// ── Request Interceptor ──────────────────────────────────────────────────────
+// Attach JWT to every outgoing request if one is stored.
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('access_token');
+    const token = getToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -26,18 +30,27 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// ── Response Interceptor ─────────────────────────────────────
+// ── Response Interceptor ─────────────────────────────────────────────────────
+// On 401: clear token and redirect to /login.
+// Skips redirect if the failing request IS the /auth/login endpoint itself
+// (wrong credentials should show an error, not redirect).
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Handle 401 Unauthorized — redirect to login
-    if (error.response?.status === 401) {
-      localStorage.removeItem('access_token');
-      // Only redirect if not already on the login page
+    const status = error.response?.status;
+    const requestUrl = error.config?.url || '';
+
+    const isLoginRequest =
+      requestUrl.includes('/auth/login') ||
+      requestUrl.includes('/auth/register');
+
+    if (status === 401 && !isLoginRequest) {
+      removeToken();
       if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
+        window.location.replace('/login');
       }
     }
+
     return Promise.reject(error);
   }
 );
