@@ -380,16 +380,28 @@ def extract_fields_from_text(raw_text: str) -> List[Dict[str, Any]]:
         )
 
     # 11. Brand Name
+        # 11. Brand Name
     brand_match = re.search(
-        r"(?:BRAND\s*(?:NAME)?|TRADEMARK|TM)\s*[:\.-]?\s*([A-Za-z0-9\s&]+)",
+        r"""
+        (?:
+            BRAND\s*(?:NAME)?
+            |TRADEMARK
+            |TM
+        )
+        \s*[:.\-]?\s*
+        ([A-Za-z0-9][A-Za-z0-9\s&.'-]*)
+        """,
         raw_text,
-        re.IGNORECASE,
+        re.IGNORECASE | re.VERBOSE,
     )
+
     if brand_match:
+        brand_value = clean_snippet(brand_match.group(1))
+
         add_field(
             field_name="brand_name",
-            field_value=brand_match.group(1),
-            confidence=0.80,
+            field_value=brand_value,
+            confidence=0.88,
             source_text=brand_match.group(0),
         )
 
